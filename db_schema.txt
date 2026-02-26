@@ -1,0 +1,122 @@
+-- 1️⃣ CREATE DATABASE
+CREATE DATABASE job_portal;
+USE job_portal;
+
+-- 2️⃣ USERS (BASE AUTH TABLE)
+CREATE TABLE Users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('jobseeker','employer','admin') NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3️⃣ JOB SEEKERS (WITH RESUME)
+CREATE TABLE JobSeekers (
+    seeker_id INT PRIMARY KEY,
+    full_name VARCHAR(100),
+    education VARCHAR(100),
+    experience_years INT,
+    resume_file LONGBLOB,
+    resume_filename VARCHAR(255),
+    resume_mime_type VARCHAR(100),
+    FOREIGN KEY (seeker_id) REFERENCES Users(user_id)
+        ON DELETE CASCADE
+);
+
+-- 4️⃣ EMPLOYERS
+CREATE TABLE Employers (
+    employer_id INT PRIMARY KEY,
+    company_name VARCHAR(100),
+    industry VARCHAR(100),
+    company_size ENUM('1-10','11-50','51-200','201-500','500+'),
+    company_location VARCHAR(100),
+    company_website VARCHAR(150),
+    FOREIGN KEY (employer_id) REFERENCES Users(user_id)
+        ON DELETE CASCADE
+);
+
+-- 5️⃣ JOBS (WITH VERIFICATION)
+CREATE TABLE Jobs (
+    job_id INT AUTO_INCREMENT PRIMARY KEY,
+    employer_id INT NOT NULL,
+    title VARCHAR(100),
+    description TEXT,
+    location VARCHAR(100),
+    job_type ENUM('full_time','part_time','internship'),
+    salary_min INT,
+    salary_max INT,
+    application_count INT DEFAULT 0,
+    status ENUM('open','closed') DEFAULT 'open',
+    is_verified BOOLEAN DEFAULT FALSE,
+    verified_by INT NULL,
+    verified_at TIMESTAMP NULL,
+    posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employer_id) REFERENCES Employers(employer_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (verified_by) REFERENCES Users(user_id)
+);
+
+-- 6️⃣ APPLICATIONS (WITH ADMIN MODERATION)
+CREATE TABLE Applications (
+    application_id INT AUTO_INCREMENT PRIMARY KEY,
+    job_id INT NOT NULL,
+    seeker_id INT NOT NULL,
+    status ENUM('applied','shortlisted','rejected','hired') DEFAULT 'applied',
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified_by_admin INT NULL,
+    admin_note VARCHAR(255) NULL,
+    UNIQUE(job_id, seeker_id),
+    FOREIGN KEY (job_id) REFERENCES Jobs(job_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (seeker_id) REFERENCES JobSeekers(seeker_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (modified_by_admin) REFERENCES Users(user_id)
+);
+
+-- 7️⃣ SKILLS MASTER TABLE
+CREATE TABLE Skills (
+    skill_id INT AUTO_INCREMENT PRIMARY KEY,
+    skill_name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- 8️⃣ JOB SKILLS (MANY-TO-MANY)
+CREATE TABLE JobSkills (
+    job_id INT,
+    skill_id INT,
+    PRIMARY KEY(job_id, skill_id),
+    FOREIGN KEY(job_id) REFERENCES Jobs(job_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY(skill_id) REFERENCES Skills(skill_id)
+        ON DELETE CASCADE
+);
+
+-- 9️⃣ SEEKER SKILLS (MANY-TO-MANY)
+CREATE TABLE SeekerSkills (
+    seeker_id INT,
+    skill_id INT,
+    proficiency ENUM('beginner','intermediate','advanced'),
+    PRIMARY KEY(seeker_id, skill_id),
+    FOREIGN KEY(seeker_id) REFERENCES JobSeekers(seeker_id)
+        ON DELETE CASCADE,
+    FOREIGN KEY(skill_id) REFERENCES Skills(skill_id)
+        ON DELETE CASCADE
+);
+
+-- 🔹 OPTIONAL: ADMIN AUDIT LOG
+CREATE TABLE AdminLogs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    action_type VARCHAR(50),
+    target_table VARCHAR(50),
+    target_id INT,
+    action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(admin_id) REFERENCES Users(user_id)
+);
+
+###-- 🔹 OPTIONAL INDEXES (FOR PERFORMANCE)
+CREATE INDEX idx_jobs_employer ON Jobs(employer_id);
+CREATE INDEX idx_applications_job ON Applications(job_id);
+CREATE INDEX idx_applications_seeker ON Applications(seeker_id);
+CREATE INDEX idx_skill_name ON Skills(skill_name);###
