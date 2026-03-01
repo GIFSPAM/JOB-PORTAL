@@ -52,7 +52,7 @@ await conn.query(
 await conn.commit(); // Save everything permanently ✅
 
     const token = jwt.sign(
-                { id: userId, role: role }, // Payload
+                { user_id: userId, role: role }, // Payload
                 process.env.JWT_SECRET,      // Secret key from .env
                 { expiresIn: '1d' }          // Token life
             );
@@ -90,18 +90,20 @@ export const login = async (req, res) => {
         }
 
         // 3. Password is correct! Sign a new JWT 🎫
-        const token = jwt.sign(
-            { id: user.user_id, role: user.role }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '1d' }
-        );
+        const payload = {
+    user_id: user.user_id, 
+    role: user.role
+};
 
-        res.status(200).json({
-            success: true,
-            message: "Logged in successfully",
-            token,
-            role: user.role
-        });
+// 2. Generate the token 🔑
+const token = jwt.sign(
+    payload,
+    process.env.JWT_SECRET,
+    { expiresIn: '1d' } // Token expires in 1 day
+);
+
+// 3. Send it to the client
+res.status(200).json({ message: "Login successful", token: token });
 
     } catch (error) {
         res.status(500).json({ error: "Login error",err: error.message });
