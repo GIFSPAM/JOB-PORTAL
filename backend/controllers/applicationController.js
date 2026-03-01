@@ -2,13 +2,15 @@ import pool from '../config/db.js';
 
 // 1️⃣ APPLY FOR JOB
 export const applyForJob = async (req, res) => {
-    const seeker_id = req.user.user_id; 
+   
+    // Check if it should be req.user.id or req.user.user_id
+    const seeker_id = req.user.user_id || req.user.id; 
     const { job_id } = req.body;
 
     try {
         // 1. Check if the seeker has a resume path in their profile
         // We now check 'resume_path' instead of binary columns
-        const [rows] = await pool.query(
+        const rows = await pool.query(
             "SELECT resume_path FROM JobSeekers WHERE seeker_id = ?",
             [seeker_id]
         );
@@ -68,7 +70,7 @@ export const getJobApplicants = async (req, res) => {
 
     try {
         const query = `
-            SELECT a.application_id, a.status, a.applied_at, 
+            SELECT a.application_id, a.status, a.applied_at,s.seeker_id, 
                    s.full_name, s.experience_years, s.resume_path
             FROM Applications a
             JOIN JobSeekers s ON a.seeker_id = s.seeker_id
@@ -100,7 +102,7 @@ export const updateApplicationStatus = async (req, res) => {
             SET a.status = ?
             WHERE a.application_id = ? AND j.employer_id = ?
         `;
-        const [result] = await pool.query(query, [status, application_id, employer_id]);
+        const result = await pool.query(query, [status, application_id, employer_id]);
         
         if (result.affectedRows === 0) {
             return res.status(403).json({ success: false, error: "Unauthorized or application not found." });
