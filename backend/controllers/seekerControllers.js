@@ -1,177 +1,226 @@
 import pool from '../config/db.js';
 
-// 1️⃣ APPLY FOR JOB
+// 1. Apply for Job
 export const applyForJob = async (req, res) => {
-   
-    // Check if it should be req.user.id or req.user.user_id
+    // Standardize the ID source
     const seeker_id = req.user.user_id || req.user.id; 
     const { job_id } = req.params;
 
     try {
-        // 1. Check if the seeker has a resume path in their profile
-        // We now check 'resume_path' instead of binary columns
+        // 1. Check if the seeker has a resume
+        // MariaDB: 'rows' is the direct array of objects
         const rows = await pool.query(
             "SELECT resume_path FROM JobSeekers WHERE seeker_id = ?",
             [seeker_id]
         );
+
         const seekerData = rows[0];
 
-        // 2. If the path is missing, they haven't uploaded a file to the disk yet
         if (!seekerData || !seekerData.resume_path) {
             return res.status(400).json({
                 success: false,
-                message: "No resume found on your profile. Please upload a PDF in your profile settings before applying."
+                message: "No resume found. Please upload a PDF in profile settings first."
             });
         }
 
-        // 3. Insert the application
-        const query = "INSERT INTO Applications (job_id, seeker_id, applied_at) VALUES (?, ?, NOW())";
-        await pool.query(query, [job_id, seeker_id]);
+        // 2. Attempt to Insert Application
+        // MariaDB: 'result' is the ResultSetHeader object, not an array
+        const result = await pool.query(
+            "INSERT INTO Applications (job_id, seeker_id, status, applied_at) VALUES (?, ?, 'applied', NOW())",
+            [job_id, seeker_id]
+        );
 
-        return res.status(201).json({
-            success: true,
+        // 3. Extract IDs (BigInt handling)
+        const applicationId = Number(result.insertId);
+
+        // SUCCESS: Return both the new application_id and the seeker_id
+        console.log(`✅ Application ${applicationId} created by Seeker ${seeker_id}`);
+        
+        return res.status(201).json({ 
+            success: true, 
             message: "Application submitted successfully!",
-            resume_used: seekerData.resume_path
+            data: {
+                application_id: applicationId,
+                seeker_id: Number(seeker_id)
+            }
         });
 
     } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({ success: false, message: "You have already applied for this job." });
+        console.error("❌ Apply Error:", err.message);
+
+        // 4. PREVENT DUPLICATES: Catch unique constraint violation
+        // In MariaDB/MySQL, 1062 is the error code for Duplicate Entry
+        if (err.code === 'ER_DUP_ENTRY' || err.errno === 1062) {
+            return res.status(409).json({ 
+                success: false, 
+                message: "You have already applied for this job." 
+            });
         }
-        return res.status(500).json({ success: false, error: err.message });
+        
+        return res.status(500).json({ 
+            success: false, 
+            error: "Internal Server Error",
+            details: err.message 
+        });
     }
 };
 
-// 2️⃣ GET SEEKER'S APPLICATIONS
+// 2. Get MY Applications
 export const getSeekerApplications = async (req, res) => {
     const seeker_id = req.user.user_id;
-
     try {
-        const query = `
-            SELECT a.application_id, a.status, a.applied_at, 
-                   j.title, j.location, e.company_name
+        const rows = await pool.query(`
+            SELECT a.application_id, a.status, a.applied_at, j.title, e.company_name ,j.job_id
             FROM Applications a
             JOIN Jobs j ON a.job_id = j.job_id
             JOIN Employers e ON j.employer_id = e.employer_id
             WHERE a.seeker_id = ?
             ORDER BY a.applied_at DESC
-        `;
-        const [rows] = await pool.query(query, [seeker_id]);
-        return res.status(200).json({ success: true, data: rows });
-    } catch (error) {
-        return res.status(500).json({ success: false, error: error.message });
-    }
-};
-
-// 3️⃣ GET APPLICANTS FOR A SPECIFIC JOB
-export const getJobApplicants = async (req, res) => {
-    const { job_id } = req.params;
-    const employer_id = req.user.user_id;
-
-    try {
-        const query = `
-            SELECT a.application_id, a.status, a.applied_at,s.seeker_id, 
-                   s.full_name, s.experience_years, s.resume_path
-            FROM Applications a
-            JOIN JobSeekers s ON a.seeker_id = s.seeker_id
-            JOIN Jobs j ON a.job_id = j.job_id
-            WHERE a.job_id = ? AND j.employer_id = ?
-        `;
-        const [rows] = await pool.query(query, [job_id, employer_id]);
-        return res.status(200).json({ success: true, data: rows });
-    } catch (error) {
-        return res.status(500).json({ success: false, error: error.message });
-    }
-};
-
-// 4️⃣ UPDATE APPLICATION STATUS
-export const updateApplicationStatus = async (req, res) => {
-    const { application_id } = req.params;
-    const { status } = req.body; 
-    const employer_id = req.user.user_id;
-
-    const validStatuses = ['applied', 'shortlisted', 'rejected', 'hired'];
-    if (!validStatuses.includes(status)) {
-        return res.status(400).json({ success: false, error: "Invalid status update." });
-    }
-
-    try {
-        const query = `
-            UPDATE Applications a
-            JOIN Jobs j ON a.job_id = j.job_id
-            SET a.status = ?
-            WHERE a.application_id = ? AND j.employer_id = ?
-        `;
-        const result = await pool.query(query, [status, application_id, employer_id]);
+        `, [seeker_id]);
         
-        if (result.affectedRows === 0) {
-            return res.status(403).json({ success: false, error: "Unauthorized or application not found." });
-        }
-        return res.status(200).json({ success: true, message: `Applicant status updated to ${status}.` });
+        return res.status(200).json({ success: true, data: rows, count: rows.length });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
 
-// 5️⃣ REVOKE APPLICATION
+// 3. Revoke Application
 export const revokeApplication = async (req, res) => {
     const { application_id } = req.params;
     const seeker_id = req.user.user_id;
-
     try {
-        const query = `DELETE FROM Applications WHERE application_id = ? AND seeker_id = ?`;
-        const result = await pool.query(query, [application_id, seeker_id]);
-
+        // Destructure [result] to access affectedRows
+        const result = await pool.query(
+            "DELETE FROM Applications WHERE application_id = ? AND seeker_id = ?", 
+            [application_id, seeker_id]
+        );
+        
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: "Application not found or unauthorized." });
         }
-
-        return res.status(200).json({ success: true, message: "Application revoked successfully. 🗑️" });
+        return res.status(200).json({ success: true, message: "Application revoked." });
     } catch (error) {
-        return res.status(500).json({ success: false, error: "Failed to revoke application.", details: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
 };
 
-// 6️⃣ UPDATE RESUME
+// 4. Update Resume (Ghost-Proof & Stale-Data Proof)
 export const updateResume = async (req, res) => {
+    // 1. Validation Guard
+    if (!req.file) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "No file uploaded. Please select a PDF." 
+        });
+    }
+
     try {
-        // 1. Check if Multer successfully processed a file
-        if (!req.file) {
-            return res.status(400).json({ 
+        const seeker_id = req.user.user_id;
+        
+        // LOCK variables to THIS request immediately
+        const current_path = `/uploads/${req.file.filename}`;
+        const current_name = req.file.originalname;
+
+        const query = "UPDATE JobSeekers SET resume_path = ?, resume_filename = ? WHERE seeker_id = ?";
+        
+        // FIX: Capture the raw response without destructuring [result]
+        const rawResponse = await pool.query(query, [current_path, current_name, seeker_id]);
+
+        // SAFETY CHECK: Some drivers return [result, fields], some return just result
+        const result = Array.isArray(rawResponse) ? rawResponse[0] : rawResponse;
+
+        // If result is null or affectedRows is 0, the user wasn't found
+        if (!result || result.affectedRows === 0) {
+            return res.status(404).json({ 
                 success: false, 
-                message: "No file uploaded. Please select a PDF." 
+                message: "User profile not found in database." 
             });
         }
 
-        const seeker_id = req.user.user_id;
+        // 2. SUCCESS: Explicit return with the FRESH variables
+        console.log(`✅ Success: Updated DB with ${current_name}`);
         
-        // 2. Define the path where the file is stored on the server
-        const resume_path = `/uploads/${req.file.filename}`; 
-        
-        // 3. Capture the original name of the file (e.g., "my_cv.pdf")
-        const original_name = req.file.originalname;
-
-        // 4. Update both columns in the database
-        // Order of variables in the array must match the '?' order in the string
-        const query = `
-            UPDATE JobSeekers 
-            SET resume_path = ?, resume_filename = ? 
-            WHERE seeker_id = ?
-        `;
-        
-        await pool.query(query, [resume_path, original_name, seeker_id]);
-
-        return res.status(200).json({ 
-            success: true, 
-            message: "Resume uploaded and profile updated successfully!",
+        return res.status(200).json({
+            success: true,
+            message: "Resume updated successfully!",
             data: {
-                path: resume_path,
-                filename: original_name
+                path: current_path,
+                filename: current_name
             }
         });
+
     } catch (err) {
-        // Log the error for the developer and send a clear message to the user
-        console.error("Upload Error:", err);
-        return res.status(500).json({ success: false, error: "Internal server error during upload." });
+        console.error("❌ Controller Error:", err.message);
+
+        // 3. Header Guard: Only send 500 if we haven't sent the 200 yet
+        if (!res.headersSent) {
+            return res.status(500).json({ 
+                success: false, 
+                error: "Internal Server Error during upload",
+                details: err.message 
+            });
+        }
+    }
+};
+
+// 5. Update Seeker Skills (With Proficiency)
+export const updateSkills = async (req, res) => {
+    const seeker_id = req.user.user_id;
+    const { skills } = req.body; // Expecting [{ name: "Java", proficiency: "intermediate" }]
+
+    if (!Array.isArray(skills)) {
+        return res.status(400).json({ success: false, message: "Skills must be an array of objects." });
+    }
+
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        // Remove old links
+        await conn.query("DELETE FROM SeekerSkills WHERE seeker_id = ?", [seeker_id]);
+
+        for (const skillObj of skills) {
+            const normalized = skillObj.name.trim().toLowerCase();
+            const proficiency = skillObj.proficiency || 'beginner'; // Default if missing
+            
+            // 1. Ensure skill exists in master table
+            await conn.query("INSERT IGNORE INTO skills (skill_name) VALUES (?)", [normalized]);
+            
+            // 2. Get skill ID (MariaDB returns direct array)
+            const sRows = await conn.query("SELECT skill_id FROM skills WHERE skill_name = ?", [normalized]);
+            
+            if (sRows && sRows.length > 0) {
+                const skillId = sRows[0].skill_id;
+                
+                // 3. Link to seeker with Proficiency
+                // Ensure your table column name is exactly 'proficiency'
+                await conn.query(
+                    "INSERT INTO SeekerSkills (seeker_id, skill_id, proficiency) VALUES (?, ?, ?)", 
+                    [seeker_id, skillId, proficiency]
+                );
+            }
+        }
+
+        await conn.commit();
+        return res.status(200).json({ success: true, message: "Skills and proficiency updated." });
+
+    } catch (error) {
+        if (conn) await conn.rollback();
+        console.error("❌ Skills Update Error:", error.message);
+        
+        // Check for ENUM violation error specifically
+        if (error.errno === 1265) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Invalid proficiency level. Use: beginner, intermediate, or advanced." 
+            });
+        }
+
+        if (!res.headersSent) {
+            return res.status(500).json({ success: false, error: error.message });
+        }
+    } finally {
+        if (conn) conn.release();
     }
 };

@@ -23,6 +23,11 @@ app.use('/api/employer', employerRoutes);
 app.use('/api/public', generalRoutes); // public routes
 app.use('/uploads', express.static('uploads'));
 
+
+BigInt.prototype.toJSON = function() {       
+  return this.toString(); 
+};
+
 // Global Error Handler (Optional but recommended for Multer)
 app.use((err, req, res, next) => {
     if (err) {
