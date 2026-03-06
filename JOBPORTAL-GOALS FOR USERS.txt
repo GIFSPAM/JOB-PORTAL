@@ -1,0 +1,66 @@
+================================================================================
+                    JOB PORTAL BACKEND ARCHITECTURE & GOALS
+================================================================================
+
+[ 🛡️ ADMIN CONTROLLER ] - Prefix: /api/admin
+--------------------------------------------------------------------------------
+| Action             | Method | Endpoint             | Description             |
+|--------------------|--------|----------------------|-------------------------|
+| Register/Login     | POST   | /auth/admin/...      | Secure admin access     |
+| Verify Jobs        | PATCH  | /verify-job/:id      | Toggle is_verified flag |
+| Delete User        | DELETE | /users/:id           | Remove seeker/employer  |
+| Delete Job         | DELETE | /jobs/:id            | Remove fraudulent posts |
+| System Dashboard   | GET    | /dashboard/stats     | Aggregated platform data|
+--------------------------------------------------------------------------------
+
+[ 👤 SEEKER CONTROLLER ] - Prefix: /api/seeker
+--------------------------------------------------------------------------------
+| Action             | Method | Endpoint             | Description             |
+|--------------------|--------|----------------------|-------------------------|
+| Register/Login     | POST   | /auth/seeker/...     | Seeker-specific auth    |
+| Apply for Job      | POST   | /apply/:job_id       | Submit job application  |
+| Revoke Application | DELETE | /revoke/:app_id      | Withdraw application    |
+| View Status        | GET    | /my-applications     | [cite_start]Track progress [cite: 1]  |
+| Update Resume      | PUT    | /profile/resume      | [cite_start]Upload PDF (Multer) [cite: 1]|
+| Update Details     | PUT    | /profile/details     | Education & Experience  |
+| Manage Skills      | POST   | /profile/skills      | Link skills (M-to-M)    |
+--------------------------------------------------------------------------------
+
+[ 🏢 EMPLOYER CONTROLLER ] - Prefix: /api/employer
+--------------------------------------------------------------------------------
+| Action             | Method | Endpoint             | Description             |
+|--------------------|--------|----------------------|-------------------------|
+| Register/Login     | POST   | /auth/employer/...   | Employer-specific auth  |
+| Post Jobs          | POST   | /jobs                | Create listing w/ skills|
+| Get My Jobs        | GET    | /jobs/my-posted      | [cite_start]View own listings [cite: 1]|
+| Update/Delete Job  | PUT/DEL| /jobs/:id            | Manage existing posts   |
+| View Applicants    | GET    | /jobs/:id/applicants | [cite_start]See who applied [cite: 1] |
+| Update Status      | PUT    | /apps/:id/status     | [cite_start]Shortlist/Reject [cite: 1]|
+--------------------------------------------------------------------------------
+
+[ 🌍 GENERAL/PUBLIC CONTROLLER ] - Prefix: /api/public
+--------------------------------------------------------------------------------
+| Action             | Method | Endpoint             | Description             |
+|--------------------|--------|----------------------|-------------------------|
+| View Homepage Jobs | GET    | /jobs/verified       | [cite_start]List verified posts [cite: 1]|
+| Job Description    | GET    | /jobs/:id            | [cite_start]Detailed job view [cite: 1]|
+| Master Skill List  | GET    | /skills              | Data for dropdowns      |
+| Search & Sort      | GET    | /search              | Advanced discovery      |
+--------------------------------------------------------------------------------
+
+================================================================================
+                    🔎 ADVANCED SORTING & FILTERING LOGIC
+================================================================================
+These parameters can be applied to Public Job Searches and Employer Applicant lists.
+
+[ PARAMS FOR JOBS ]
+- sort_by=salary      : ASC/DESC (Find highest paying jobs)
+- sort_by=date        : Newest/Oldest (Find fresh postings)
+- filter=location     : Match specific city (e.g., Palakkad)
+- filter=skill_id     : Match specific technical requirement
+
+[ PARAMS FOR APPLICANTS ]
+- sort_by=experience  : Most experienced candidates first
+- filter=proficiency  : Filter for 'advanced' skill levels
+- filter=skill_id     : Filter candidates by a specific tech stack
+================================================================================

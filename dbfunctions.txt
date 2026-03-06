@@ -1,0 +1,1 @@
+    CALL clean_and_reset_db();		// to clean and restart the db 

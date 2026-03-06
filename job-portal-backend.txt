@@ -1,0 +1,23 @@
+job-portal-backend/
+├── config/
+│   └── db.js              # MariaDB connection pool configuration
+├── controllers/
+│   ├── authController.js       # Register/Login logic for all roles
+│   ├── seekerController.js     # Profile, Skills, and Applications 
+│   ├── employerController.js   # Job Posting, Applicant Management 
+│   ├── adminController.js      # Job Verification, User Moderation 
+│   └── generalController.js    # Public Jobs, Skills List, Search 
+├── middleware/
+│   ├── authMiddleware.js       # verifyToken, isJobSeeker, isEmployer, isAdmin
+│   └── uploadMiddleware.js     # Multer config for Resumes/PDFs 
+├── routes/
+│   ├── authRoutes.js           # /api/auth endpoints
+│   ├── seekerRoutes.js         # /api/seeker endpoints 
+│   ├── employerRoutes.js       # /api/employer endpoints 
+│   ├── adminRoutes.js          # /api/admin endpoints 
+│   └── generalRoutes.js        # /api/public endpoints 
+├── uploads/                    # Local storage for PDF Resumes (Git Ignored) 
+├── .env                        # Database & JWT Secrets (Git Ignored)
+├── .gitignore                  # Filter for node_modules, .env, and uploads/
+├── package.json                # Project dependencies and scripts
+└── server.js                   # Main entry point; wires routes and middleware

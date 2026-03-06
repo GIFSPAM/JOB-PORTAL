@@ -20,7 +20,7 @@ export const verifyToken = (req, res, next) => {
         
         next(); // Move to the next function (the controller or role checker)
     } catch (error) {
-        res.status(403).json({ error: "Invalid or expired token." });
+        return res.status(403).json({ error: "Invalid or expired token." });
     }
 };
 
@@ -30,7 +30,7 @@ export const isEmployer = (req, res, next) => {
     if (req.user && req.user.role === 'employer') {
         next();
     } else {
-        res.status(403).json({ error: "Access denied. Employers only." });
+        return res.status(403).json({ error: "Access denied. Employers only." });
     }
 };
 
@@ -40,7 +40,7 @@ export const isSeeker = (req, res, next) => {
     if (req.user && req.user.role === 'jobseeker') {
         next();
     } else {
-        res.status(403).json({ error: "Access denied. Job seekers only." });
+        return res.status(403).json({ error: "Access denied. Job seekers only." });
     }
 };
 
@@ -50,6 +50,6 @@ export const isAdmin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        res.status(403).json({ error: "Access denied. Admins only." });
+        return res.status(403).json({ error: "Access denied. Admins only." });
     }
 };

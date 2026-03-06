@@ -2,9 +2,10 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
-import jobRoutes from './routes/jobRoutes.js';
-import applicationRoutes from './routes/applicationRoutes.js';
-import userRoutes from './routes/userRoutes.js'; // 1. Import new user routes
+import adminRoutes from './routes/adminRoutes.js';
+import seekerRoutes from './routes/seekerRoutes.js';
+import employerRoutes from './routes/employerRoutes.js';
+import generalRoutes from './routes/generalRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -12,14 +13,14 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json()); 
-// 2. This handles standard form fields if you ever use them
 app.use(express.urlencoded({ extended: true })); 
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/applications', applicationRoutes);
-app.use('/api/users', userRoutes); // 3. Register the user routes (for uploads)
+app.use('/api/admin', adminRoutes);
+app.use('/api/seeker', seekerRoutes);
+app.use('/api/employer', employerRoutes);
+app.use('/api/public', generalRoutes); // public routes
 app.use('/uploads', express.static('uploads'));
 
 // Global Error Handler (Optional but recommended for Multer)

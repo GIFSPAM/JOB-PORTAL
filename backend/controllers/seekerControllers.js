@@ -5,7 +5,7 @@ export const applyForJob = async (req, res) => {
    
     // Check if it should be req.user.id or req.user.user_id
     const seeker_id = req.user.user_id || req.user.id; 
-    const { job_id } = req.body;
+    const { job_id } = req.params;
 
     try {
         // 1. Check if the seeker has a resume path in their profile
@@ -28,7 +28,7 @@ export const applyForJob = async (req, res) => {
         const query = "INSERT INTO Applications (job_id, seeker_id, applied_at) VALUES (?, ?, NOW())";
         await pool.query(query, [job_id, seeker_id]);
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "Application submitted successfully!",
             resume_used: seekerData.resume_path
@@ -38,7 +38,7 @@ export const applyForJob = async (req, res) => {
         if (err.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ success: false, message: "You have already applied for this job." });
         }
-        res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
 };
 
@@ -57,9 +57,9 @@ export const getSeekerApplications = async (req, res) => {
             ORDER BY a.applied_at DESC
         `;
         const [rows] = await pool.query(query, [seeker_id]);
-        res.status(200).json({ success: true, data: rows });
+        return res.status(200).json({ success: true, data: rows });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
 };
 
@@ -78,9 +78,9 @@ export const getJobApplicants = async (req, res) => {
             WHERE a.job_id = ? AND j.employer_id = ?
         `;
         const [rows] = await pool.query(query, [job_id, employer_id]);
-        res.status(200).json({ success: true, data: rows });
+        return res.status(200).json({ success: true, data: rows });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
 };
 
@@ -107,8 +107,71 @@ export const updateApplicationStatus = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(403).json({ success: false, error: "Unauthorized or application not found." });
         }
-        res.status(200).json({ success: true, message: `Applicant status updated to ${status}.` });
+        return res.status(200).json({ success: true, message: `Applicant status updated to ${status}.` });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 5️⃣ REVOKE APPLICATION
+export const revokeApplication = async (req, res) => {
+    const { application_id } = req.params;
+    const seeker_id = req.user.user_id;
+
+    try {
+        const query = `DELETE FROM Applications WHERE application_id = ? AND seeker_id = ?`;
+        const result = await pool.query(query, [application_id, seeker_id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "Application not found or unauthorized." });
+        }
+
+        return res.status(200).json({ success: true, message: "Application revoked successfully. 🗑️" });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: "Failed to revoke application.", details: error.message });
+    }
+};
+
+// 6️⃣ UPDATE RESUME
+export const updateResume = async (req, res) => {
+    try {
+        // 1. Check if Multer successfully processed a file
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "No file uploaded. Please select a PDF." 
+            });
+        }
+
+        const seeker_id = req.user.user_id;
+        
+        // 2. Define the path where the file is stored on the server
+        const resume_path = `/uploads/${req.file.filename}`; 
+        
+        // 3. Capture the original name of the file (e.g., "my_cv.pdf")
+        const original_name = req.file.originalname;
+
+        // 4. Update both columns in the database
+        // Order of variables in the array must match the '?' order in the string
+        const query = `
+            UPDATE JobSeekers 
+            SET resume_path = ?, resume_filename = ? 
+            WHERE seeker_id = ?
+        `;
+        
+        await pool.query(query, [resume_path, original_name, seeker_id]);
+
+        return res.status(200).json({ 
+            success: true, 
+            message: "Resume uploaded and profile updated successfully!",
+            data: {
+                path: resume_path,
+                filename: original_name
+            }
+        });
+    } catch (err) {
+        // Log the error for the developer and send a clear message to the user
+        console.error("Upload Error:", err);
+        return res.status(500).json({ success: false, error: "Internal server error during upload." });
     }
 };
