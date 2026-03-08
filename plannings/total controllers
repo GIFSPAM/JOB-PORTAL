@@ -1,0 +1,101 @@
+## Complete List of Backend Controllers
+
+### **Provided Controllers:**
+
+1. **authControllers.js** (register.js - just provided)
+
+1. `register` - POST /api/auth/register
+2. `login` - POST /api/auth/login
+
+
+
+2. **employerControllers.js** (create-job.js)
+
+1. `createJob` - POST /api/employer/jobs
+2. `getEmployerJobs` - GET /api/employer/jobs
+3. `updateJob` - PUT /api/employer/jobs/:job_id
+4. `updateJobStatus` - PATCH /api/employer/jobs/:job_id/status
+5. `getJobApplicants` - GET /api/employer/jobs/:job_id/applicants
+6. `updateApplicationStatus` - PATCH /api/employer/applications/:application_id/status
+7. `deleteMyJob` - DELETE /api/employer/jobs/:job_id
+
+
+
+3. **adminControllers.js** (verify-job.js)
+
+1. `verifyJob` - PATCH /api/admin/jobs/:job_id/verify
+
+
+
+4. **seekerControllers.js** (apply-for-job.js)
+
+1. `applyForJob` - POST /api/seeker/apply/:job_id
+2. `getSeekerApplications` - GET /api/seeker/applications
+3. `revokeApplication` - DELETE /api/seeker/applications/:application_id
+4. `updateResume` - POST /api/seeker/resume
+5. `updateSkills` - PUT /api/seeker/skills
+
+
+
+5. **publicControllers.js** (get-public-jobs.js)
+
+1. `getPublicJobs` - GET /api/public/jobs
+2. `getJobById` - GET /api/public/jobs/:job_id
+3. `getSkillsList` - GET /api/public/skills
+
+
+
+
+
+---
+
+### **Additional Controllers Required:**
+
+6. **adminUserControllers.js** (Admin user/data management)
+
+1. `getAdminStats` - GET /api/admin/stats
+2. `getAllJobs` - GET /api/admin/jobs
+3. `getAllEmployers` - GET /api/admin/employers
+4. `getAllSeekers` - GET /api/admin/seekers
+5. `deleteEmployer` - DELETE /api/admin/employers/:employer_id
+6. `deleteSeeker` - DELETE /api/admin/seekers/:seeker_id
+7. `unverifyJob` - PATCH /api/admin/jobs/:job_id/unverify
+8. `deleteJob` - DELETE /api/admin/jobs/:job_id
+
+
+
+7. **employerProfileControllers.js** (Employer profile & stats)
+
+1. `getEmployerStats` - GET /api/employer/stats
+2. `getEmployerProfile` - GET /api/employer/profile
+3. `updateEmployerProfile` - PUT /api/employer/profile
+
+
+
+8. **seekerProfileControllers.js** (Seeker profile management)
+
+1. `getSeekerProfile` - GET /api/seeker/profile
+2. `updateSeekerProfile` - PUT /api/seeker/profile
+3. `getSeekerStats` - GET /api/seeker/stats
+
+
+
+
+
+---
+
+### **Summary Table:**
+
+| Controller File | Status | Endpoints
+|-----|-----|-----
+| authControllers.js | Provided | 2
+| employerControllers.js | Provided | 7
+| adminControllers.js | Provided | 1
+| seekerControllers.js | Provided | 5
+| publicControllers.js | Provided | 3
+| adminUserControllers.js | **Required** | 8
+| employerProfileControllers.js | **Required** | 3
+| seekerProfileControllers.js | **Required** | 3
+
+
+**Total: 32 endpoints** (18 provided, 14 required)

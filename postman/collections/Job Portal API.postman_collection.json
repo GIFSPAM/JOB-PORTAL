@@ -1,0 +1,961 @@
+{
+  "info": {
+    "_postman_id": "fe285c2b-e15a-469f-be60-9fa4395b0f53",
+    "name": "Job Portal API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "52806451"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "item": [
+            {
+              "name": "Login Admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if(pm.response.code===200){pm.environment.set(\"token\",pm.response.json().token);} "
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"adminpass123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Login Seeker",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if(pm.response.code===200){pm.environment.set(\"token\",pm.response.json().token);} "
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"seeker@example.com\",\n  \"password\": \"seekerpass123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Login Employer",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if(pm.response.code===200){pm.environment.set(\"token\",pm.response.json().token);} "
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"employer@example.com\",\n  \"password\": \"employerpass123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Register Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if(pm.response.code===201){pm.environment.set(\"token\",pm.response.json().token);} "
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"adminpass123\",\n  \"role\": \"admin\",\n  \"secretKey\": \"{{admin_secret}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register Seeker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if(pm.response.code===201){pm.environment.set(\"token\",pm.response.json().token);} "
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"seeker@example.com\",\n  \"password\": \"seekerpass123\",\n  \"role\": \"jobseeker\",\n  \"full_name\": \"John Doe\",\n  \"education\": \"Bachelor's\",\n  \"experience_years\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register Employer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if(pm.response.code===201){pm.environment.set(\"token\",pm.response.json().token);} "
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employer@example.com\",\n  \"password\": \"employerpass123\",\n  \"role\": \"employer\",\n  \"company_name\": \"Tech Corp\",\n  \"industry\": \"IT\",\n  \"company_size\": \"11-50\",\n  \"company_location\": \"NYC\",\n  \"company_website\": \"https://tech.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Seeker Actions",
+      "item": [
+        {
+          "name": "Upload Resume",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seeker_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seeker/profile/resume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "profile",
+                "resume"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Apply Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if(pm.response.code===201){pm.environment.set(\"application_id\",pm.response.json().data.application_id);} "
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seeker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/seeker/apply/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "apply",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "View Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seeker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/seeker/my-applications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "my-applications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke Application",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seeker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/seeker/revoke/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "revoke",
+                "{{application_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Skills",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{seeker_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skills\": [\n    { \"name\": \"JavaScript\" ,\"proficiency\": \"\" },\n    { \"name\": \"Node.js\", \"proficiency\": \"intermediate\" },\n    { \"name\": \"MariaDB\", \"proficiency\": \"beginner\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seeker/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "skills"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employer Actions",
+      "item": [
+        {
+          "name": "Create Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if(pm.response.code===201){pm.environment.set(\"job_id\",pm.response.json().job_id);} "
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\":\"Software Engineer\",\n  \"description\":\"Build apps\",\n  \"location\":\"Remote\",\n  \"job_type\":\"full_time\",\n  \"salary_min\":50000,\n  \"salary_max\":70000,\n  \"skills\":[\"JavaScript\",\"React\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/post",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "post"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "View Jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/employer/my-jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "my-jobs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Job",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\":\"Updated Title\",\n  \"description\":\"Updated desc\",\n  \"location\":\"Remote\",\n  \"job_type\":\"full_time\",\n  \"salary_min\":60000,\n  \"salary_max\":80000,\n  \"skills\":[\"Node.js\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/update/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "update",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Job Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\":\"closed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/status/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "status",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "View Applicants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if(pm.response.code===200){const apps=pm.response.json().data;if(apps.length>0)pm.environment.set(\"application_id\",apps[0].application_id);} "
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/employer/applicants/{{job_id}}?skill_name=&proficiency=&sort_by=date",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "employer",
+                "applicants",
+                "{{job_id}}"
+              ],
+              "query": [
+                {
+                  "key": "skill_name",
+                  "value": ""
+                },
+                {
+                  "key": "proficiency",
+                  "value": ""
+                },
+                {
+                  "key": "sort_by",
+                  "value": "date"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update App Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{employer_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\":\"shortlisted\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/application-status/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "application-status",
+                "{{application_id}}"
+              ]
+            },
+            "description": "status | enum('applied','shortlisted','rejected','hired')"
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Actions",
+      "item": [
+        {
+          "name": "Verify Job",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/verify-job/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "verify-job",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Actions",
+      "item": [
+        {
+          "name": "List Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/public/jobs?search=&sort_by=&location=&skills=&job_type=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "sort_by",
+                  "value": ""
+                },
+                {
+                  "key": "location",
+                  "value": ""
+                },
+                {
+                  "key": "skills",
+                  "value": ""
+                },
+                {
+                  "key": "job_type",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Job Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/public/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "jobs",
+                "{{job_id}}"
+              ]
+            },
+            "description": "#### Purpose\nRetrieve details for a single public job posting by its ID.\n\n---\n#### Endpoint\n`GET {{base_url}}/api/public/jobs/{{job_id}}`\n\n- **Method:** `GET`\n- **Auth:** **Public** (No authentication required)\n\n---\n#### Variables\n**Base URL**\n- `{{base_url}}` — API host (for example `http://localhost`)\n\n**Path variable**\n- `{{job_id}}` — The job identifier to fetch details for.\n\n---\n#### Example request\n```http\nGET {{base_url}}/api/public/jobs/{{job_id}}\n```\n\n---\n#### Possible responses\n**200 OK** — Job found; returns job details.\n\n**404 Not Found** — No job exists for the provided `job_id`.\n\n**422 Unprocessable Entity** — Validation error (for example, `job_id` is missing/invalid).\n\n---\n#### Example response shape (200)\n```json\n{\n  \"id\": 1,\n  \"title\": \"Software Engineer\",\n  \"company\": \"Acme Inc\",\n  \"location\": \"Remote\",\n  \"employment_type\": \"Full-time\",\n  \"description\": \"...\",\n  \"skills\": [\"JavaScript\", \"Node.js\"],\n  \"status\": \"open\",\n  \"created_at\": \"2026-01-01T12:00:00Z\",\n  \"updated_at\": \"2026-01-02T12:00:00Z\"\n}\n```\n\n> Note: Field names may vary based on your backend implementation; use the response returned by your API as the source of truth."
+          },
+          "response": []
+        },
+        {
+          "name": "Skills List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/public/skills?search=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "skills"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All Jobs Audit",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/public/all-jobs/?search=&sort_by=&location=&skills=&job_type=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "all-jobs",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "sort_by",
+                  "value": ""
+                },
+                {
+                  "key": "location",
+                  "value": ""
+                },
+                {
+                  "key": "skills",
+                  "value": ""
+                },
+                {
+                  "key": "job_type",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "admin_secret",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "seeker_token",
+      "value": ""
+    },
+    {
+      "key": "employer_token",
+      "value": ""
+    },
+    {
+      "key": "job_id",
+      "value": ""
+    },
+    {
+      "key": "application_id",
+      "value": ""
+    }
+  ]
+}
