@@ -237,3 +237,42 @@ export const updateApplicationStatus = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+// 6) DELETE /api/employer/jobs/:job_id
+export async function deleteMyJob(req, res, next) {
+    try {
+        const jobId = req.params.job_id; // Match your route param name
+        const employerId = req.user.user_id || req.user.id;
+
+        // 1. Fetch the job to check ownership
+        // MariaDB: returns rows directly as an array
+        const rows = await pool.query('SELECT employer_id FROM Jobs WHERE job_id = ?', [jobId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Job not found' });
+        }
+
+        // 2. Normalize BigInts for comparison
+        const dbEmployerId = Number(rows[0].employer_id);
+        const currentUserId = Number(employerId);
+
+        if (dbEmployerId !== currentUserId) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'Not authorized to delete this job' 
+            });
+        }
+
+        // 3. Execute Delete
+        await pool.query('DELETE FROM Jobs WHERE job_id = ?', [jobId]);
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Job deleted successfully' 
+        });
+
+    } catch (error) {
+        console.error("❌ Delete Job Error:", error.message);
+        next(error);
+    }
+};

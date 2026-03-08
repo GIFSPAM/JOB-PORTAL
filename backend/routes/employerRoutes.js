@@ -5,7 +5,8 @@ import {
     updateJob, 
     updateJobStatus, 
     getJobApplicants, 
-    updateApplicationStatus 
+    updateApplicationStatus,
+    deleteMyJob
 } from '../controllers/employerControllers.js';
 import { verifyToken, isEmployer} from '../middleware/authMiddleware.js';
 
@@ -21,5 +22,6 @@ router.put('/update/:job_id',  updateJob); // Added this
 router.patch('/status/:job_id', updateJobStatus);
 router.get('/applicants/:job_id', getJobApplicants);
 router.patch('/application-status/:application_id', updateApplicationStatus);
+router.delete('/delete-jobs/:job_id', deleteMyJob);
 
 export default router;
