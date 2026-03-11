@@ -113,6 +113,16 @@ CREATE TABLE AdminLogs (
     action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(admin_id) REFERENCES Users(user_id)
 );
+10.CREATE TABLE SavedJobs (
+    seeker_id INT NOT NULL,
+    job_id INT NOT NULL,
+    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (seeker_id, job_id),
+    FOREIGN KEY (seeker_id) REFERENCES JobSeekers(seeker_id) 
+        ON DELETE CASCADE,
+    FOREIGN KEY (job_id) REFERENCES Jobs(job_id) 
+        ON DELETE CASCADE
+);
 
 ###-- 🔹 OPTIONAL INDEXES (FOR PERFORMANCE)
 CREATE INDEX idx_jobs_employer ON Jobs(employer_id);
