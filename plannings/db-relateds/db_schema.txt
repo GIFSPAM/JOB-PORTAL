@@ -16,6 +16,7 @@ CREATE TABLE Users (
 CREATE TABLE JobSeekers (
     seeker_id INT PRIMARY KEY,
     full_name VARCHAR(100),
+    phone_number VARCHAR(20),
     education VARCHAR(100),
     experience_years INT(11),
     resume_path   VARCHAR(255),
@@ -28,6 +29,7 @@ CREATE TABLE JobSeekers (
 CREATE TABLE Employers (
     employer_id INT PRIMARY KEY,
     company_name VARCHAR(100),
+    company_phone VARCHAR(20) ,
     industry VARCHAR(100),
     company_size ENUM('1-10','11-50','51-200','201-500','500+'),
     company_location VARCHAR(100),
