@@ -1,0 +1,382 @@
+JOB PORTAL API STRUCTURE SUMMARY
+================================
+
+GOAL
+----
+Build a complete job portal API that supports:
+1. Guest users viewing demo and public job listings
+2. Jobseekers managing profiles, applications, resumes, skills, and saved jobs
+3. Employers posting jobs and managing applicants
+4. Admins verifying and auditing jobs
+
+----------------------------------------------------------------
+1. API GROUPS
+----------------------------------------------------------------
+
+PUBLIC APIS
+-----------
+Purpose:
+- Expose job data that does not require login
+- Power guest-facing public job browsing
+
+Endpoints:
+- GET /api/public/jobs
+- GET /api/public/jobs/:job_id
+- GET /api/public/skills
+- GET /api/public/landing-jobs
+
+Notes:
+- /landing-jobs is recommended for guest demo job feeds
+- public job responses should include company_name and skills
+
+AUTH APIS
+---------
+Purpose:
+- Register and authenticate users
+- Return current logged-in user information
+
+Endpoints:
+- POST /api/auth/register
+- POST /api/auth/login
+- GET /api/auth/me
+
+SEEKER APIS
+-----------
+Purpose:
+- Support jobseeker-only features
+
+Endpoints:
+- POST /api/seeker/apply/:job_id
+- GET /api/seeker/my-applications
+- DELETE /api/seeker/revoke/:application_id
+- GET /api/seeker/profile
+- PUT /api/seeker/profile
+- PUT /api/seeker/profile/resume
+- PUT /api/seeker/skills
+- POST /api/seeker/saved-jobs/:job_id
+- GET /api/seeker/saved-jobs
+- DELETE /api/seeker/saved-jobs/:job_id
+
+EMPLOYER APIS
+-------------
+Purpose:
+- Support job posting and applicant management
+
+Endpoints:
+- POST /api/employer/post
+- GET /api/employer/my-jobs
+- PUT /api/employer/update/:job_id
+- PATCH /api/employer/status/:job_id
+- DELETE /api/employer/delete-jobs/:job_id
+- GET /api/employer/applicants/:job_id
+- PATCH /api/employer/application-status/:application_id
+- GET /api/employer/profile
+- PUT /api/employer/profile
+
+ADMIN APIS
+----------
+Purpose:
+- Moderate jobs and manage platform users
+
+Endpoints:
+- GET /api/admin/users
+- GET /api/admin/users/:user_id
+- PATCH /api/admin/users/:user_id/status
+- DELETE /api/admin/users/:user_id
+- DELETE /api/admin/jobs/:job_id
+- GET /api/admin/all-jobs
+- PATCH /api/admin/verify-job/:job_id
+
+----------------------------------------------------------------
+6. KEY FIXES NEEDED
+- Main backend application
+- Separate route groups by role for clarity
+1. Add GET /api/public/landing-jobs for guest demo jobs
+2. Add GET /api/auth/me for current-user hydration
+Recommended grouped folder map:
+
+backend/
+|-- server.js
+|-- config/
+|   |-- db.js
+|-- middleware/
+10. Normalize job_type values across DB enums and API responses
+|   |-- uploadMiddleware.js
+|-- controllers/
+7. RECOMMENDED IMPLEMENTATION ORDER
+|   |-- publicControllers.js
+|   |-- seekerControllers.js
+|   |-- employerControllers.js
+|   |-- adminControllers.js
+|-- routes/
+|   |-- auth/
+|   |   |-- auth.routes.js
+|   |-- public/
+|   |   |-- public.routes.js
+|   |-- seeker/
+|   |   |-- seeker.routes.js
+|   |-- employer/
+|   |   |-- employer.routes.js
+|   |-- admin/
+|       |-- admin.routes.js
+|-- services/
+|   |-- authService.js
+|   |-- publicService.js
+|   |-- seekerService.js
+|   |-- employerService.js
+|   |-- adminService.js
+|-- shared/
+|   |-- validators/
+|   |-- responses/
+|-- uploads/
+
+FOLDER PURPOSES
+---------------
+
+config/
+- Stores shared backend configuration
+- db.js should manage the database connection pool
+
+middleware/
+- Stores reusable request logic before controllers run
+- Example: token verification, role checks, upload handling
+
+controllers/
+- Stores grouped business logic by role or access type
+- Each controller file can contain multiple handlers for that role
+- Keeps logic centralized and easier to scan than many tiny controller files
+
+routes/
+- Stores separated route groups by role or access type
+- Each role gets its own route file under its own route folder
+- Keeps endpoint definitions clear without scattering controller logic
+
+services/
+- Optional layer for reusable role-based business logic or database operations
+- Useful when controllers become large
+
+shared/
+- Stores helpers reused across multiple modules
+- Keep only validators and response helpers for now
+
+uploads/
+- Stores generated uploaded files such as resumes
+- Should contain files only, not source code
+
+server.js
+- Entry point of the backend
+- Mounts middleware, grouped route files, static uploads, and the error handler
+
+----------------------------------------------------------------
+4. RESPONSIBILITY BY GROUPED CONTROLLERS
+----------------------------------------------------------------
+
+controllers/authControllers.js
+- Handles registration, login, and current-user fetch
+- Example endpoints:
+	- POST /api/auth/register
+	- POST /api/auth/login
+	- GET /api/auth/me
+
+controllers/publicControllers.js
+- Handles guest-accessible APIs
+- Example endpoints:
+	- GET /api/public/jobs
+	- GET /api/public/jobs/:job_id
+	- GET /api/public/skills
+	- GET /api/public/landing-jobs
+
+controllers/seekerControllers.js
+- Handles all jobseeker-only actions
+- Suggested contents:
+	- apply for job
+	- list applications
+	- revoke application
+	- get and update profile
+	- upload resume
+	- update skills
+	- save or unsave jobs
+
+controllers/employerControllers.js
+- Handles employer-only actions
+- Suggested contents:
+	- create job
+	- list employer jobs
+	- update job
+	- update job status
+	- delete job
+	- list applicants
+	- update application status
+	- get and update company profile
+
+controllers/adminControllers.js
+- Handles moderation and admin-only management actions
+- Suggested contents:
+	- verify job
+	- list all jobs
+	- delete job as admin
+	- list users
+	- get single user
+	- update user status
+	- delete user
+
+services/*.js
+- Optional extracted business logic if controller files become too large
+- Keep DB-heavy or reusable domain logic here
+
+shared/validators/
+- Shared request validation rules
+
+shared/responses/
+- Standard response format helpers if you want consistent JSON output
+
+----------------------------------------------------------------
+5. ROUTE FILE SUMMARY BY GROUP
+----------------------------------------------------------------
+
+routes/auth/auth.routes.js
+- /register
+- /login
+- /me
+
+routes/public/public.routes.js
+- /jobs
+- /jobs/:job_id
+- /skills
+- /landing-jobs
+
+routes/seeker/seeker.routes.js
+- /apply/:job_id
+- /my-applications
+- /revoke/:application_id
+- /profile
+- /profile/resume
+- /skills
+- /saved-jobs/:job_id
+- /saved-jobs
+
+routes/employer/employer.routes.js
+- /post
+- /my-jobs
+- /update/:job_id
+- /status/:job_id
+- /applicants/:job_id
+- /application-status/:application_id
+- /delete-jobs/:job_id
+- /profile
+
+routes/admin/admin.routes.js
+- /users
+- /users/:user_id
+- /users/:user_id/status
+- /users/:user_id
+- /jobs/:job_id
+- /verify-job/:job_id
+- /all-jobs
+
+----------------------------------------------------------------
+6. FRONTEND INTEGRATION SUMMARY
+----------------------------------------------------------------
+
+LandingPage.tsx
+- should call GET /api/public/landing-jobs
+
+LoginPage.tsx
+- calls POST /api/auth/login
+
+RegisterPage.tsx
+- calls POST /api/auth/register
+
+seeker/JobSearch.tsx
+- calls GET /api/public/jobs
+- calls GET /api/public/skills
+
+seeker/JobDetails.tsx
+- calls GET /api/public/jobs/:job_id
+- calls POST /api/seeker/apply/:job_id
+- can later support save job button
+
+seeker/MyApplications.tsx
+- calls GET /api/seeker/my-applications
+- calls DELETE /api/seeker/revoke/:application_id
+
+seeker/Profile.tsx
+- should call GET /api/seeker/profile
+- should call PUT /api/seeker/profile
+- calls PUT /api/seeker/profile/resume
+- calls PUT /api/seeker/skills
+
+employer/ManageJobs.tsx
+- calls GET /api/employer/my-jobs
+- calls PATCH /api/employer/status/:job_id
+- calls DELETE /api/employer/delete-jobs/:job_id
+
+employer/ApplicantDetails.tsx
+- calls GET /api/employer/applicants/:job_id
+- calls PATCH /api/employer/application-status/:application_id
+
+employer/CompanyProfile.tsx
+- should call GET /api/employer/profile
+- should call PUT /api/employer/profile
+
+useAuth.tsx
+- should use GET /api/auth/me for real user hydration
+
+----------------------------------------------------------------
+7. KEY FIXES NEEDED
+----------------------------------------------------------------
+
+1. Add GET /api/public/landing-jobs for guest landing page jobs
+2. Add GET /api/auth/me for real auth state hydration
+3. Add seeker profile read and update endpoints
+4. Add saved jobs endpoints using the SavedJobs table
+5. Add employer profile read and update endpoints
+6. Add admin user-management endpoints
+7. Add admin delete-user and delete-job endpoints
+8. Move or expose GET /api/admin/all-jobs cleanly under admin routes
+9. Return company_name and skills in public job responses where needed
+10. Normalize job_type values between frontend and backend
+
+----------------------------------------------------------------
+8. RECOMMENDED IMPLEMENTATION ORDER
+----------------------------------------------------------------
+
+Phase 1
+- GET /api/public/landing-jobs
+- GET /api/auth/me
+- fix public job response shape
+
+Phase 2
+- GET /api/seeker/profile
+- PUT /api/seeker/profile
+- GET /api/employer/profile
+- PUT /api/employer/profile
+
+Phase 3
+- POST /api/seeker/saved-jobs/:job_id
+- GET /api/seeker/saved-jobs
+- DELETE /api/seeker/saved-jobs/:job_id
+
+Phase 4
+- GET /api/admin/users
+- GET /api/admin/users/:user_id
+- PATCH /api/admin/users/:user_id/status
+- DELETE /api/admin/users/:user_id
+- DELETE /api/admin/jobs/:job_id
+- clean admin all-jobs route
+
+----------------------------------------------------------------
+8. MINIMUM BACKEND FILES TO ADD NEXT
+----------------------------------------------------------------
+
+Backend:
+- backend/controllers/publicControllers.js
+- backend/controllers/authControllers.js
+- backend/controllers/seekerControllers.js
+- backend/controllers/employerControllers.js
+- backend/controllers/adminControllers.js
+- backend/routes/public/public.routes.js
+- backend/routes/auth/auth.routes.js
+- backend/routes/seeker/seeker.routes.js
+- backend/routes/employer/employer.routes.js
+- backend/routes/admin/admin.routes.js

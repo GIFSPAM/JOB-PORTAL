@@ -3,152 +3,56 @@
     "_postman_id": "fe285c2b-e15a-469f-be60-9fa4395b0f53",
     "name": "Job Portal API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "52806451"
+    "description": "Structured end-to-end collection for the backend routes. Run folders in order for best results."
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('run_id')) {",
+          "  pm.collectionVariables.set('run_id', String(Date.now()));",
+          "}",
+          "const runId = pm.collectionVariables.get('run_id');",
+          "if (!pm.collectionVariables.get('admin_email')) pm.collectionVariables.set('admin_email', `admin.${runId}@example.com`);",
+          "if (!pm.collectionVariables.get('employer_email')) pm.collectionVariables.set('employer_email', `employer.${runId}@example.com`);",
+          "if (!pm.collectionVariables.get('seeker_email')) pm.collectionVariables.set('seeker_email', `seeker.${runId}@example.com`);",
+          "if (!pm.collectionVariables.get('admin_password')) pm.collectionVariables.set('admin_password', 'Admin@12345');",
+          "if (!pm.collectionVariables.get('employer_password')) pm.collectionVariables.set('employer_password', 'Employer@12345');",
+          "if (!pm.collectionVariables.get('seeker_password')) pm.collectionVariables.set('seeker_password', 'Seeker@12345');"
+        ]
+      }
+    }
+  ],
   "item": [
     {
-      "name": "Authentication",
+      "name": "00 - Bootstrap (Run First)",
+      "description": "Creates role users (idempotent), logs them in, and captures role tokens.",
       "item": [
         {
-          "name": "Login",
-          "item": [
-            {
-              "name": "Login Admin",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if(pm.response.code===200){pm.environment.set(\"token\",pm.response.json().token);} "
-                    ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"adminpass123\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/api/auth/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "api",
-                    "auth",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Login Seeker",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if(pm.response.code===200){pm.environment.set(\"token\",pm.response.json().token);} "
-                    ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"seeker@example.com\",\n  \"password\": \"seekerpass123\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/api/auth/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "api",
-                    "auth",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Login Employer",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if(pm.response.code===200){pm.environment.set(\"token\",pm.response.json().token);} "
-                    ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"employer@example.com\",\n  \"password\": \"employerpass123\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/api/auth/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "api",
-                    "auth",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Register Admin",
+          "name": "01 Register Admin",
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "if(pm.response.code===201){pm.environment.set(\"token\",pm.response.json().token);} "
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Register admin returns 201 or 409', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Register admin response is json', function () {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.test('Token is present on 201', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('admin_token', body.data.token);",
+                  "    pm.collectionVariables.set('token', body.data.token);",
+                  "  });",
+                  "}"
+                ]
               }
             }
           ],
@@ -162,7 +66,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"adminpass123\",\n  \"role\": \"admin\",\n  \"secretKey\": \"{{admin_secret}}\"\n}"
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"role\": \"admin\",\n  \"secretKey\": \"{{admin_secret}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",
@@ -179,17 +83,23 @@
           "response": []
         },
         {
-          "name": "Register Seeker",
+          "name": "02 Login Admin",
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "if(pm.response.code===201){pm.environment.set(\"token\",pm.response.json().token);} "
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Login admin status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Admin token is captured', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.token).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('admin_token', body.data.token);",
+                  "  pm.collectionVariables.set('token', body.data.token);",
+                  "});"
+                ]
               }
             }
           ],
@@ -203,7 +113,55 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"seeker@example.com\",\n  \"password\": \"seekerpass123\",\n  \"role\": \"jobseeker\",\n  \"full_name\": \"John Doe\",\n  \"education\": \"Bachelor's\",\n  \"experience_years\": 2\n}"
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 Register Employer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Register employer returns 201 or 409', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.test('Token exists on employer registration', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('employer_token', body.data.token);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{employer_email}}\",\n  \"password\": \"{{employer_password}}\",\n  \"role\": \"employer\",\n  \"company_name\": \"Tech Corp {{run_id}}\",\n  \"industry\": \"IT\",\n  \"company_size\": \"11-50\",\n  \"company_location\": \"NYC\",\n  \"company_website\": \"https://tech.example.com\",\n  \"company_phone\": \"1234567890\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",
@@ -220,17 +178,22 @@
           "response": []
         },
         {
-          "name": "Register Employer",
+          "name": "04 Login Employer",
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "if(pm.response.code===201){pm.environment.set(\"token\",pm.response.json().token);} "
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Login employer status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Employer token is captured', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.token).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('employer_token', body.data.token);",
+                  "});"
+                ]
               }
             }
           ],
@@ -244,7 +207,55 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"employer@example.com\",\n  \"password\": \"employerpass123\",\n  \"role\": \"employer\",\n  \"company_name\": \"Tech Corp\",\n  \"industry\": \"IT\",\n  \"company_size\": \"11-50\",\n  \"company_location\": \"NYC\",\n  \"company_website\": \"https://tech.com\"\n}"
+              "raw": "{\n  \"email\": \"{{employer_email}}\",\n  \"password\": \"{{employer_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Register Seeker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Register seeker returns 201 or 409', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.test('Token exists on seeker registration', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('seeker_token', body.data.token);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{seeker_email}}\",\n  \"password\": \"{{seeker_password}}\",\n  \"role\": \"jobseeker\",\n  \"full_name\": \"John Doe {{run_id}}\",\n  \"education\": \"Bachelor's\",\n  \"experience_years\": 2,\n  \"phone_number\": \"9876543210\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",
@@ -259,59 +270,24 @@
             }
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "Seeker Actions",
-      "item": [
-        {
-          "name": "Upload Resume",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{seeker_token}}"
-              }
-            ],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "resume",
-                  "type": "file",
-                  "value": null
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/api/seeker/profile/resume",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "seeker",
-                "profile",
-                "resume"
-              ]
-            }
-          },
-          "response": []
         },
         {
-          "name": "Apply Job",
+          "name": "06 Login Seeker",
           "event": [
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "if(pm.response.code===201){pm.environment.set(\"application_id\",pm.response.json().data.application_id);} "
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "pm.test('Login seeker status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Seeker token is captured', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.token).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('seeker_token', body.data.token);",
+                  "});"
+                ]
               }
             }
           ],
@@ -319,471 +295,92 @@
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{seeker_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/seeker/apply/{{job_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "seeker",
-                "apply",
-                "{{job_id}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "View Applications",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{seeker_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/seeker/my-applications",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "seeker",
-                "my-applications"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Revoke Application",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{seeker_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/seeker/revoke/{{application_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "seeker",
-                "revoke",
-                "{{application_id}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Skills",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{seeker_token}}"
-              },
-              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"skills\": [\n    { \"name\": \"JavaScript\" ,\"proficiency\": \"\" },\n    { \"name\": \"Node.js\", \"proficiency\": \"intermediate\" },\n    { \"name\": \"MariaDB\", \"proficiency\": \"beginner\" }\n  ]\n}"
+              "raw": "{\n  \"email\": \"{{seeker_email}}\",\n  \"password\": \"{{seeker_password}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/seeker/skills",
+              "raw": "{{base_url}}/api/auth/login",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "seeker",
-                "skills"
+                "auth",
+                "login"
               ]
             }
           },
           "response": []
-        }
-      ],
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{token}}",
-            "type": "string"
-          }
-        ]
-      },
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {},
-            "exec": [
-              ""
-            ]
-          }
         },
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {},
-            "exec": [
-              ""
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Employer Actions",
-      "item": [
-        {
-          "name": "Create Job",
+          "name": "07 Auth Me (Admin)",
           "event": [
             {
-              "listen": "test",
+              "listen": "prerequest",
               "script": {
-                "exec": [
-                  "if(pm.response.code===201){pm.environment.set(\"job_id\",pm.response.json().job_id);} "
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{employer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\":\"Software Engineer\",\n  \"description\":\"Build apps\",\n  \"location\":\"Remote\",\n  \"job_type\":\"full_time\",\n  \"salary_min\":50000,\n  \"salary_max\":70000,\n  \"skills\":[\"JavaScript\",\"React\"]\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/employer/post",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "employer",
-                "post"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "View Jobs",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{employer_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/employer/my-jobs",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "employer",
-                "my-jobs"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Job",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{employer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\":\"Updated Title\",\n  \"description\":\"Updated desc\",\n  \"location\":\"Remote\",\n  \"job_type\":\"full_time\",\n  \"salary_min\":60000,\n  \"salary_max\":80000,\n  \"skills\":[\"Node.js\"]\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/employer/update/{{job_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "employer",
-                "update",
-                "{{job_id}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Job Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{employer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\":\"closed\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/employer/status/{{job_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "employer",
-                "status",
-                "{{job_id}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "View Applicants",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if(pm.response.code===200){const apps=pm.response.json().data;if(apps.length>0)pm.environment.set(\"application_id\",apps[0].application_id);} "
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "exec": [
+                  "const adminToken = pm.collectionVariables.get('admin_token');",
+                  "if (!adminToken || adminToken.trim() === '') {",
+                  "  throw new Error('admin_token is not set. Run \"02 Login Admin\" first.');",
+                  "}",
+                  "pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + adminToken });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Auth me status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Auth me returns user_id', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.user_id).to.be.a('number');",
+                  "});",
+                  "pm.test('Auth me role matches admin', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.role).to.equal('admin');",
+                  "});"
+                ]
               }
             }
           ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{employer_token}}"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "http://localhost:5000/api/employer/applicants/{{job_id}}?skill_name=&proficiency=&sort_by=date",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "5000",
-              "path": [
-                "api",
-                "employer",
-                "applicants",
-                "{{job_id}}"
-              ],
-              "query": [
-                {
-                  "key": "skill_name",
-                  "value": ""
-                },
-                {
-                  "key": "proficiency",
-                  "value": ""
-                },
-                {
-                  "key": "sort_by",
-                  "value": "date"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update App Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{employer_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\":\"shortlisted\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/employer/application-status/{{application_id}}",
+              "raw": "{{base_url}}/api/auth/me",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "employer",
-                "application-status",
-                "{{application_id}}"
-              ]
-            },
-            "description": "status | enum('applied','shortlisted','rejected','hired')"
-          },
-          "response": []
-        }
-      ],
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{token}}",
-            "type": "string"
-          }
-        ]
-      },
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {},
-            "exec": [
-              ""
-            ]
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {},
-            "exec": [
-              ""
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin Actions",
-      "item": [
-        {
-          "name": "Verify Job",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{admin_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/admin/verify-job/{{job_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "verify-job",
-                "{{job_id}}"
+                "auth",
+                "me"
               ]
             }
           },
           "response": []
         }
-      ],
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{token}}",
-            "type": "string"
-          }
-        ]
-      },
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {},
-            "exec": [
-              ""
-            ]
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {},
-            "exec": [
-              ""
-            ]
-          }
-        }
       ]
     },
     {
-      "name": "Public Actions",
+      "name": "01 - Public APIs",
+      "description": "Public routes. List jobs first to auto-capture a public job id.",
       "item": [
         {
-          "name": "List Jobs",
+          "name": "01 List Jobs",
           "request": {
             "method": "GET",
             "header": [],
@@ -821,34 +418,61 @@
               ]
             }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List jobs status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('List jobs data is array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  if (body.data.length > 0) pm.collectionVariables.set('public_job_id', String(body.data[0].job_id));",
+                  "});"
+                ]
+              }
+            }
+          ],
           "response": []
         },
         {
-          "name": "Job Details",
+          "name": "02 Landing Jobs",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
-              "raw": "{{base_url}}/api/public/jobs/{{job_id}}",
+              "raw": "{{base_url}}/api/public/landing-jobs",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "public",
-                "jobs",
-                "{{job_id}}"
+                "landing-jobs"
               ]
-            },
-            "description": "#### Purpose\nRetrieve details for a single public job posting by its ID.\n\n---\n#### Endpoint\n`GET {{base_url}}/api/public/jobs/{{job_id}}`\n\n- **Method:** `GET`\n- **Auth:** **Public** (No authentication required)\n\n---\n#### Variables\n**Base URL**\n- `{{base_url}}` — API host (for example `http://localhost`)\n\n**Path variable**\n- `{{job_id}}` — The job identifier to fetch details for.\n\n---\n#### Example request\n```http\nGET {{base_url}}/api/public/jobs/{{job_id}}\n```\n\n---\n#### Possible responses\n**200 OK** — Job found; returns job details.\n\n**404 Not Found** — No job exists for the provided `job_id`.\n\n**422 Unprocessable Entity** — Validation error (for example, `job_id` is missing/invalid).\n\n---\n#### Example response shape (200)\n```json\n{\n  \"id\": 1,\n  \"title\": \"Software Engineer\",\n  \"company\": \"Acme Inc\",\n  \"location\": \"Remote\",\n  \"employment_type\": \"Full-time\",\n  \"description\": \"...\",\n  \"skills\": [\"JavaScript\", \"Node.js\"],\n  \"status\": \"open\",\n  \"created_at\": \"2026-01-01T12:00:00Z\",\n  \"updated_at\": \"2026-01-02T12:00:00Z\"\n}\n```\n\n> Note: Field names may vary based on your backend implementation; use the response returned by your API as the source of truth."
+            }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Landing jobs status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "response": []
         },
         {
-          "name": "Skills List",
+          "name": "03 Skills List",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
               "raw": "{{base_url}}/api/public/skills?search=",
               "host": [
@@ -867,33 +491,638 @@
               ]
             }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Skills list status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Skills list returns array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "response": []
         },
         {
-          "name": "All Jobs Audit",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+          "name": "04 Job Details",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const resolved = pm.collectionVariables.get('job_id') || pm.collectionVariables.get('public_job_id') || '1';",
+                  "pm.variables.set('resolved_job_id', resolved);"
+                ]
+              }
             },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job details status is 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Job details has data.job_id', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.job_id).to.exist;",
+                  "    pm.collectionVariables.set('public_job_id', String(body.data.job_id));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
             "method": "GET",
-            "header": [],
             "url": {
-              "raw": "{{base_url}}/api/public/all-jobs/?search=&sort_by=&location=&skills=&job_type=",
+              "raw": "{{base_url}}/api/public/jobs/{{resolved_job_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "public",
-                "all-jobs",
-                ""
+                "jobs",
+                "{{resolved_job_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Employer APIs",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const token = pm.collectionVariables.get('employer_token');",
+              "if (!token) {",
+              "  throw new Error('Missing employer_token. Run 00 - Bootstrap first.');",
+              "}",
+              "pm.request.headers.upsert({ key: 'Authorization', value: `Bearer ${token}` });"
+            ]
+          }
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{employer_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "01 Get Employer Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/employer/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Employer profile status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 Update Employer Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"Tech Corp Updated {{run_id}}\",\n  \"company_phone\": \"5555555555\",\n  \"industry\": \"IT Services\",\n  \"company_size\": \"51-200\",\n  \"company_location\": \"Remote\",\n  \"company_website\": \"https://updated-tech.example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update employer profile status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 Create Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create job status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Create job captures job_id', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.job_id).to.exist;",
+                  "  pm.collectionVariables.set('job_id', String(body.job_id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Software Engineer {{run_id}}\",\n  \"description\": \"Build backend APIs\",\n  \"location\": \"Remote\",\n  \"job_type\": \"full_time\",\n  \"salary_min\": 50000,\n  \"salary_max\": 90000,\n  \"skills\": [\"JavaScript\", \"Node.js\", \"MariaDB\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/post",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "post"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 View My Jobs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/employer/my-jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "my-jobs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('View my jobs status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('My jobs data is array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  if (!pm.collectionVariables.get('job_id') && body.data.length > 0) pm.collectionVariables.set('job_id', String(body.data[0].job_id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05 Update Job",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Software Engineer Updated {{run_id}}\",\n  \"description\": \"Build and maintain backend APIs\",\n  \"location\": \"Remote\",\n  \"job_type\": \"full_time\",\n  \"salary_min\": 60000,\n  \"salary_max\": 100000,\n  \"skills\": [\"Node.js\", \"Express\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/update/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "update",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update job status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "06 Update Job Status (Open)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"open\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/status/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "status",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update job status route returns 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07 View Applicants",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/employer/applicants/{{job_id}}?skill_name=&proficiency=&sort_by=date",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "applicants",
+                "{{job_id}}"
+              ],
+              "query": [
+                {
+                  "key": "skill_name",
+                  "value": ""
+                },
+                {
+                  "key": "proficiency",
+                  "value": ""
+                },
+                {
+                  "key": "sort_by",
+                  "value": "date"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('View applicants status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Applicants data is array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  if (body.data.length > 0) pm.collectionVariables.set('application_id', String(body.data[0].application_id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08 Update Application Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"shortlisted\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/employer/application-status/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "application-status",
+                "{{application_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update application status returns 200 or 403', function () {",
+                  "  pm.expect([200, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 Get Employer Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/employer/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Employer stats status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Employer stats payload includes totals', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.have.property('total_jobs');",
+                  "  pm.expect(body.data).to.have.property('applications_by_status');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "10 Download Candidate Resume (Auth Route)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const applicationId = pm.collectionVariables.get('application_id') || '1';",
+                  "pm.variables.set('resolved_application_id', applicationId);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Download candidate resume returns 200, 403, or 404', function () {",
+                  "  pm.expect([200, 403, 404]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Resume download has attachment headers', function () {",
+                  "    const disposition = pm.response.headers.get('Content-Disposition') || '';",
+                  "    pm.expect(disposition.toLowerCase()).to.include('attachment');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/auth/resume-download/{{resolved_application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "resume-download",
+                "{{resolved_application_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 Delete My Job",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const resolved = pm.collectionVariables.get('job_id') || pm.collectionVariables.get('public_job_id') || '1';",
+                  "pm.variables.set('resolved_job_id', resolved);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Delete my job returns 200, 403, or 404', function () {",
+                  "  pm.expect([200, 403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/employer/delete-jobs/{{resolved_job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "employer",
+                "delete-jobs",
+                "{{resolved_job_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Admin APIs",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const token = pm.collectionVariables.get('admin_token');",
+              "if (!token) {",
+              "  throw new Error('Missing admin_token. Run 00 - Bootstrap first.');",
+              "}",
+              "pm.request.headers.upsert({ key: 'Authorization', value: `Bearer ${token}` });",
+              "const targetUserId = pm.collectionVariables.get('admin_target_user_id') || '1';",
+              "pm.variables.set('resolved_admin_target_user_id', targetUserId);"
+            ]
+          }
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{admin_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "01 Verify Job",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/api/admin/verify-job/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "verify-job",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Verify job status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 Get All Jobs (Admin Audit)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/admin/all-jobs?search=&sort_by=&location=&skills=&job_type=&status=&is_verified=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "all-jobs"
               ],
               "query": [
                 {
@@ -915,10 +1144,900 @@
                 {
                   "key": "job_type",
                   "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "is_verified",
+                  "value": ""
                 }
               ]
             }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin all-jobs status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 Get Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin users status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Admin users array and capture target user', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  if (body.data.length > 0) {",
+                  "    const firstNonAdmin = body.data.find(u => u.role !== 'admin');",
+                  "    if (firstNonAdmin) pm.collectionVariables.set('admin_target_user_id', String(firstNonAdmin.user_id));",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04 Get User By Id",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fallback = pm.collectionVariables.get('admin_target_user_id') || '1';",
+                  "pm.variables.set('resolved_admin_target_user_id', fallback);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin get user by id status is 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/{{resolved_admin_target_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{resolved_admin_target_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 Update User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/{{resolved_admin_target_user_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{resolved_admin_target_user_id}}",
+                "status"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin update user status returns 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "06 Delete Job As Admin",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/admin/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "jobs",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin delete job returns 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07 Delete User (Optional Last Step)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/{{resolved_admin_target_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{resolved_admin_target_user_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin delete user returns 200, 400, or 404', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08 Get Admin Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/admin/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin stats status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Admin stats has users/jobs/applications', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.have.property('users');",
+                  "  pm.expect(body.data).to.have.property('jobs');",
+                  "  pm.expect(body.data).to.have.property('applications');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 Get All Employers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/admin/employers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "employers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin employers status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Admin employers list is array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "10 Get All Seekers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/admin/seekers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "seekers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin seekers status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Admin seekers list is array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "11 Unverify Job",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/api/admin/unverify-job/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "unverify-job",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unverify job returns 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Seeker APIs",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const token = pm.collectionVariables.get('seeker_token');",
+              "if (!token) {",
+              "  throw new Error('Missing seeker_token. Run 00 - Bootstrap first.');",
+              "}",
+              "pm.request.headers.upsert({ key: 'Authorization', value: `Bearer ${token}` });"
+            ]
+          }
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{seeker_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "01 Get Seeker Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seeker profile status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 Update Seeker Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Seeker Updated {{run_id}}\",\n  \"phone_number\": \"9998887776\",\n  \"education\": \"Master's\",\n  \"experience_years\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seeker/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update seeker profile status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 Upload Resume",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const token = pm.collectionVariables.get('seeker_token');",
+                  "if (!token) {",
+                  "  throw new Error('Missing seeker_token. Run 00 - Bootstrap first.');",
+                  "}",
+                  "const resumePath = pm.collectionVariables.get('resume_file_path');",
+                  "if (!resumePath) {",
+                  "  throw new Error('Missing resume_file_path. Set it to a local PDF path before running Upload Resume.');",
+                  "}",
+                  "if (!/\\.pdf$/i.test(resumePath)) {",
+                  "  throw new Error('uploadMiddleware only accepts application/pdf. Use a .pdf file for resume_file_path.');",
+                  "}",
+                  "pm.request.headers.upsert({ key: 'Authorization', value: `Bearer ${token}` });",
+                  "pm.request.headers.remove('Content-Type');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Upload resume returns 200 or 400', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Upload response contains stored file metadata', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.path).to.be.a('string').and.include('/uploads/');",
+                  "    pm.expect(body.data.filename).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "src": "{{resume_file_path}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seeker/profile/resume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "profile",
+                "resume"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 Update Skills",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skills\": [\n    { \"name\": \"JavaScript\", \"proficiency\": \"advanced\" },\n    { \"name\": \"Node.js\", \"proficiency\": \"intermediate\" },\n    { \"name\": \"MariaDB\", \"proficiency\": \"beginner\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seeker/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "skills"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Update skills status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05 Save Job",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/saved-jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "saved-jobs",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Save job returns 201 or 409', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "06 Get Saved Jobs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/saved-jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "saved-jobs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Get saved jobs status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07 Remove Saved Job",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/saved-jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "saved-jobs",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Remove saved job returns 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08 Apply Job",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/apply/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "apply",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Apply job returns 201, 400, or 409', function () {",
+                  "  pm.expect([201, 400, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.test('Application id captured', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.application_id).to.exist;",
+                  "    pm.collectionVariables.set('application_id', String(body.data.application_id));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 View Applications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/my-applications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "my-applications"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('View applications status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Applications list is array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  if (body.data.length > 0) pm.collectionVariables.set('application_id', String(body.data[0].application_id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "10 Revoke Application",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/revoke/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "revoke",
+                "{{application_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Revoke application returns 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "11 Get Seeker Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "stats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seeker stats status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Seeker stats includes matchable profile metrics', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data).to.have.property('total_applications');",
+                  "  pm.expect(body.data).to.have.property('skills_count');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "12 Job Skill Match (Detail)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const resolved = pm.collectionVariables.get('job_id') || pm.collectionVariables.get('public_job_id') || '1';",
+                  "pm.variables.set('resolved_job_id', resolved);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job skill match status is 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Job skill match returns percentage and arrays', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.data.match_percentage).to.be.a('number');",
+                  "    pm.expect(body.data.match_percentage).to.be.at.least(0);",
+                  "    pm.expect(body.data.match_percentage).to.be.at.most(100);",
+                  "    pm.expect(body.data.matched_skills).to.be.an('array');",
+                  "    pm.expect(body.data.missing_skills).to.be.an('array');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/job-match/{{resolved_job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "job-match",
+                "{{resolved_job_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13 Download My Resume",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/seeker/profile/resume/download",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "seeker",
+                "profile",
+                "resume",
+                "download"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Download my resume returns 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Self resume download has attachment headers', function () {",
+                  "    const disposition = pm.response.headers.get('Content-Disposition') || '';",
+                  "    pm.expect(disposition.toLowerCase()).to.include('attachment');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
           "response": []
         }
       ]
@@ -934,6 +2053,34 @@
       "value": ""
     },
     {
+      "key": "run_id",
+      "value": ""
+    },
+    {
+      "key": "admin_email",
+      "value": ""
+    },
+    {
+      "key": "admin_password",
+      "value": ""
+    },
+    {
+      "key": "employer_email",
+      "value": ""
+    },
+    {
+      "key": "employer_password",
+      "value": ""
+    },
+    {
+      "key": "seeker_email",
+      "value": ""
+    },
+    {
+      "key": "seeker_password",
+      "value": ""
+    },
+    {
       "key": "token",
       "value": ""
     },
@@ -942,11 +2089,11 @@
       "value": ""
     },
     {
-      "key": "seeker_token",
+      "key": "employer_token",
       "value": ""
     },
     {
-      "key": "employer_token",
+      "key": "seeker_token",
       "value": ""
     },
     {
@@ -954,7 +2101,19 @@
       "value": ""
     },
     {
+      "key": "public_job_id",
+      "value": ""
+    },
+    {
       "key": "application_id",
+      "value": ""
+    },
+    {
+      "key": "admin_target_user_id",
+      "value": ""
+    },
+    {
+      "key": "resume_file_path",
       "value": ""
     }
   ]

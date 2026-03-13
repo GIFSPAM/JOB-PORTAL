@@ -1,101 +1,120 @@
 ## Complete List of Backend Controllers
-
-### **Provided Controllers:**
-
-1. **authControllers.js** (register.js - just provided)
-
-1. `register` - POST /api/auth/register
-2. `login` - POST /api/auth/login
-
-
-
-2. **employerControllers.js** (create-job.js)
-
-1. `createJob` - POST /api/employer/jobs
-2. `getEmployerJobs` - GET /api/employer/jobs
-3. `updateJob` - PUT /api/employer/jobs/:job_id
-4. `updateJobStatus` - PATCH /api/employer/jobs/:job_id/status
-5. `getJobApplicants` - GET /api/employer/jobs/:job_id/applicants
-6. `updateApplicationStatus` - PATCH /api/employer/applications/:application_id/status
-7. `deleteMyJob` - DELETE /api/employer/jobs/:job_id
-
-
-
-3. **adminControllers.js** (verify-job.js)
-
-1. `verifyJob` - PATCH /api/admin/jobs/:job_id/verify
-
-
-
-4. **seekerControllers.js** (apply-for-job.js)
-
-1. `applyForJob` - POST /api/seeker/apply/:job_id
-2. `getSeekerApplications` - GET /api/seeker/applications
-3. `revokeApplication` - DELETE /api/seeker/applications/:application_id
-4. `updateResume` - POST /api/seeker/resume
-5. `updateSkills` - PUT /api/seeker/skills
-
-
-
-5. **publicControllers.js** (get-public-jobs.js)
-
-1. `getPublicJobs` - GET /api/public/jobs
-2. `getJobById` - GET /api/public/jobs/:job_id
-3. `getSkillsList` - GET /api/public/skills
-
-
-
-
+## Last updated: 2026-03-14 (route-mount integrity sync)
 
 ---
 
-### **Additional Controllers Required:**
+### IMPLEMENTED — authControllers.js
+> Route prefix: /api/auth
 
-6. **adminUserControllers.js** (Admin user/data management)
-
-1. `getAdminStats` - GET /api/admin/stats
-2. `getAllJobs` - GET /api/admin/jobs
-3. `getAllEmployers` - GET /api/admin/employers
-4. `getAllSeekers` - GET /api/admin/seekers
-5. `deleteEmployer` - DELETE /api/admin/employers/:employer_id
-6. `deleteSeeker` - DELETE /api/admin/seekers/:seeker_id
-7. `unverifyJob` - PATCH /api/admin/jobs/:job_id/unverify
-8. `deleteJob` - DELETE /api/admin/jobs/:job_id
-
-
-
-7. **employerProfileControllers.js** (Employer profile & stats)
-
-1. `getEmployerStats` - GET /api/employer/stats
-2. `getEmployerProfile` - GET /api/employer/profile
-3. `updateEmployerProfile` - PUT /api/employer/profile
-
-
-
-8. **seekerProfileControllers.js** (Seeker profile management)
-
-1. `getSeekerProfile` - GET /api/seeker/profile
-2. `updateSeekerProfile` - PUT /api/seeker/profile
-3. `getSeekerStats` - GET /api/seeker/stats
-
-
-
-
+| # | Function | Method | Route | Auth |
+|---|----------|--------|-------|------|
+| 1 | `register` | POST | /api/auth/register | Public |
+| 2 | `login` | POST | /api/auth/login | Public |
+| 3 | `getMe` | GET | /api/auth/me | verifyToken |
 
 ---
 
-### **Summary Table:**
+### IMPLEMENTED — employerControllers.js
+> Primary prefix: /api/employer | Middleware: verifyToken + isEmployer
+> Shared protected route mounted under /api/auth
 
-| Controller File | Status | Endpoints
-|-----|-----|-----
-| authControllers.js | Provided | 2
-| employerControllers.js | Provided | 7
-| adminControllers.js | Provided | 1
-| seekerControllers.js | Provided | 5
-| publicControllers.js | Provided | 3
-| adminUserControllers.js | **Required** | 8
-| employerProfileControllers.js | **Required** | 3
-| seekerProfileControllers.js | **Required** | 3
+| # | Function | Method | Route | Notes |
+|---|----------|--------|-------|-------|
+| 1 | `createJob` | POST | /api/employer/post | Transaction + skill upsert |
+| 2 | `getEmployerJobs` | GET | /api/employer/my-jobs | |
+| 3 | `updateJob` | PUT | /api/employer/update/:job_id | Transaction + skill replace |
+| 4 | `updateJobStatus` | PATCH | /api/employer/status/:job_id | open/closed toggle |
+| 5 | `deleteMyJob` | DELETE | /api/employer/delete-jobs/:job_id | Ownership check |
+| 6 | `getJobApplicants` | GET | /api/employer/applicants/:job_id | Filterable: skill_name, proficiency, sort_by |
+| 7 | `updateApplicationStatus` | PATCH | /api/employer/application-status/:application_id | |
+| 8 | `getEmployerProfile` | GET | /api/employer/profile | |
+| 9 | `updateEmployerProfile` | PUT | /api/employer/profile | Allowed fields whitelist |
+| 10 | `getEmployerStats` | GET | /api/employer/stats | Total jobs, open/closed, verified, applications by status |
+| 11 | `downloadCandidateResume` | GET | /api/auth/resume-download/:application_id | Shared protected resume download (employer owner or seeker owner) |
 
+---
 
-**Total: 32 endpoints** (18 provided, 14 required)
+### IMPLEMENTED — seekerControllers.js
+> Route prefix: /api/seeker | Middleware: verifyToken + isSeeker
+
+| # | Function | Method | Route | Notes |
+|---|----------|--------|-------|-------|
+| 1 | `applyForJob` | POST | /api/seeker/apply/:job_id | Requires resume_path in DB |
+| 2 | `getSeekerApplications` | GET | /api/seeker/my-applications | |
+| 3 | `revokeApplication` | DELETE | /api/seeker/revoke/:application_id | |
+| 4 | `getSeekerProfile` | GET | /api/seeker/profile | |
+| 5 | `updateSeekerProfile` | PUT | /api/seeker/profile | Allowed fields whitelist |
+| 6 | `updateResume` | PUT | /api/seeker/profile/resume | multer PDF upload |
+| 7 | `downloadMyResume` | GET | /api/seeker/profile/resume/download | Seeker self-resume download |
+| 8 | `updateSkills` | PUT | /api/seeker/skills | Transaction + proficiency ENUM |
+| 9 | `saveJob` | POST | /api/seeker/saved-jobs/:job_id | |
+| 10 | `getSavedJobs` | GET | /api/seeker/saved-jobs | |
+| 11 | `removeSavedJob` | DELETE | /api/seeker/saved-jobs/:job_id | |
+| 12 | `getSeekerStats` | GET | /api/seeker/stats | total_applications, by_status, saved_jobs, skills_count |
+| 13 | `getJobSkillMatch` | GET | /api/seeker/job-match/:job_id | Job-vs-seeker skill match percentage |
+
+---
+
+### IMPLEMENTED — adminControllers.js
+> Route prefix: /api/admin | Middleware: verifyToken + isAdmin
+
+| # | Function | Method | Route | Notes |
+|---|----------|--------|-------|-------|
+| 1 | `getUsers` | GET | /api/admin/users | |
+| 2 | `getUserById` | GET | /api/admin/users/:user_id | |
+| 3 | `updateUserStatus` | PATCH | /api/admin/users/:user_id/status | Active/inactive toggle |
+| 4 | `deleteUser` | DELETE | /api/admin/users/:user_id | |
+| 5 | `deleteJobAsAdmin` | DELETE | /api/admin/jobs/:job_id | |
+| 6 | `verifyJob` | PATCH | /api/admin/verify-job/:job_id | |
+| 7 | `getAllJobs` | GET | /api/admin/all-jobs | Filterable: search, location, job_type, status, is_verified, skills |
+| 8 | `getAdminStats` | GET | /api/admin/stats | users, employers, seekers, jobs, verified, open, applications |
+| 9 | `getAllEmployers` | GET | /api/admin/employers | |
+| 10 | `getAllSeekers` | GET | /api/admin/seekers | |
+| 11 | `unverifyJob` | PATCH | /api/admin/unverify-job/:job_id | Reverts verification |
+
+---
+
+### IMPLEMENTED — publicControllers.js
+> Route prefix: /api/public | Middleware: none
+
+| # | Function | Method | Route | Notes |
+|---|----------|--------|-------|-------|
+| 1 | `getPublicJobs` | GET | /api/public/jobs | Filterable: search, location, job_type, skills, sort_by, limit |
+| 2 | `getJobById` | GET | /api/public/jobs/:job_id | |
+| 3 | `getSkillsList` | GET | /api/public/skills | Searchable |
+| 4 | `getLandingJobs` | GET | /api/public/landing-jobs | Delegates to getPublicJobs (limit=6) |
+
+---
+
+### Comparison Update (Previous vs Current)
+
+| Area | Previous file | Current implementation |
+|------|---------------|------------------------|
+| Shared resume route | Not listed | Added `/api/auth/resume-download/:application_id` (`downloadCandidateResume`) |
+| Seeker resume download | Not listed | Added `/api/seeker/profile/resume/download` (`downloadMyResume`) |
+| Seeker job match route | Not listed in summary | Added `/api/seeker/job-match/:job_id` (`getJobSkillMatch`) |
+| Totals | 39 implemented | 42 implemented |
+
+---
+
+### Route-Mount Verification
+
+| Check | Result |
+|------|--------|
+| Controller exports discovered | 42 |
+| Exports referenced in routes | 42 |
+| Unmounted controller exports | 0 |
+
+---
+
+### Summary Table
+
+| Controller File | Status | Implemented | Pending |
+|----------------|--------|-------------|---------|
+| authControllers.js | ✅ Done | 3 | 0 |
+| employerControllers.js | ✅ Done | 11 | 0 |
+| seekerControllers.js | ✅ Done | 13 | 0 |
+| adminControllers.js | ✅ Done | 11 | 0 |
+| publicControllers.js | ✅ Done | 4 | 0 |
+| **Total** | | **42** | **0** |
+

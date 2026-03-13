@@ -1,148 +1,114 @@
 import pool from '../config/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import { ok, fail } from '../shared/responses/httpResponse.js';
+import {
+    SELECT_USER_BY_EMAIL,
+    SELECT_USER_ID_BY_EMAIL,
+    INSERT_USER,
+    INSERT_JOBSEEKER_PROFILE,
+    INSERT_EMPLOYER_PROFILE,
+    SELECT_AUTH_USER_BY_ID
+} from '../services/queries/authQueries.js';
 
-dotenv.config();
-
-/**
- * REGISTER CONTROLLER
- * Implements Idempotency (pre-checks) and Promise-wrapped responses
- * to prevent "Ghost Success" (DB saves but response hangs).
- */
+const signToken = (user_id, role) =>
+    jwt.sign({ user_id, role }, process.env.JWT_SECRET, { expiresIn: '1d' });
 export const register = async (req, res) => {
-    const { email, password, role, secretKey, ...ProfileData } = req.body;
-    let conn;
+    const { email, password, role, secretKey, ...profileData } = req.body;
 
-    // 1. Initial Guard Clauses
-    if (role === 'admin' && secretKey !== process.env.ADMIN_SECRET) {
-        return res.status(403).json({ success: false, message: "INVALID ADMIN SECRET" });
+    if (!email || !password || !role) {
+        return res.status(400).json({ success: false, message: "email, password and role are required." });
     }
 
+    if (role === 'admin' && secretKey !== process.env.ADMIN_SECRET) {
+        return res.status(403).json({ success: false, message: "Invalid admin secret." });
+    }
+
+    let conn;
     try {
         conn = await pool.getConnection();
 
-        // 2. IDEMPOTENCY CHECK: Avoid duplicate processing if a previous request "Ghosted"
-        const [existing] = await conn.query("SELECT user_id FROM Users WHERE email = ?", [email]);
+        const [existing] = await conn.query(SELECT_USER_ID_BY_EMAIL, [email]);
         if (existing) {
-            return res.status(409).json({ 
-                success: false, 
-                message: "Email already registered. Try logging in." 
-            });
+            return res.status(409).json({ success: false, message: "Email already registered." });
         }
 
-        // 3. START TRANSACTION
         await conn.beginTransaction();
 
-        const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(password, salt);
+        const hash = await bcrypt.hash(password, 10);
+        const { insertId } = await conn.query(INSERT_USER, [email, hash, role]);
+        const userId = Number(insertId);
 
-        const userResult = await conn.query(
-            "INSERT INTO Users (email, password_hash, role) VALUES (?, ?, ?)",
-            [email, hash, role]
-        );
-        const userId = Number(userResult.insertId);
-
-        // 4. ROLE-BASED DATA INSERTION
         if (role === 'jobseeker') {
-            await conn.query(
-                "INSERT INTO JobSeekers (seeker_id, full_name, education, experience_years) VALUES (?, ?, ?, ?)",
-                [userId, ProfileData.full_name, ProfileData.education, ProfileData.experience_years]
-            );
+            await conn.query(INSERT_JOBSEEKER_PROFILE, [
+                userId, profileData.full_name, profileData.education,
+                profileData.experience_years, profileData.phone_number
+            ]);
         } else if (role === 'employer') {
-            await conn.query(
-                "INSERT INTO Employers (employer_id, company_name, industry, company_size, company_location, company_website) VALUES (?, ?, ?, ?, ?, ?)",
-                [userId, ProfileData.company_name, ProfileData.industry, ProfileData.company_size, ProfileData.company_location, ProfileData.company_website]
-            );
+            await conn.query(INSERT_EMPLOYER_PROFILE, [
+                userId, profileData.company_name, profileData.industry,
+                profileData.company_size, profileData.company_location,
+                profileData.company_website, profileData.company_phone || null
+            ]);
         }
 
-        // 5. COMMIT DATABASE
         await conn.commit();
 
-        // 6. PROMISE-WRAPPED RESPONSE (The Ghost-Proofing)
-        // This ensures the connection is only released AFTER the response is buffered.
-        return await new Promise((resolve) => {
-            const token = jwt.sign(
-                { user_id: userId, role },
-                process.env.JWT_SECRET,
-                { expiresIn: '1d' }
-            );
-
-            res.status(201).json({
-                success: true,
-                message: "Registered successfully!",
-                token,
-                role
-            });
-
-            console.log(`✅ Registration Success: ID ${userId}`);
-            resolve(); // Triggers the finally block
-        });
+        const token = signToken(userId, role);
+        const [userRow] = await conn.query(SELECT_AUTH_USER_BY_ID, [userId]);
+        return ok(res, { ...userRow, token }, null, 201);
 
     } catch (err) {
         if (conn) await conn.rollback().catch(() => {});
-        
-        console.error("❌ Registration Error:", err.message);
-
-        if (!res.headersSent) {
-            const isConflict = err.errno === 1062;
-            return res.status(isConflict ? 409 : 500).json({
-                success: false,
-                error: isConflict ? "Conflict: Email already exists" : "Internal Server Error",
-                details: err.message
-            });
-        }
+        const isConflict = err.errno === 1062;
+        return fail(res, isConflict ? "Email already exists." : "Internal server error.", isConflict ? 409 : 500);
     } finally {
-        if (conn) {
-            conn.release();
-            console.log("🚪 DB Connection Released");
-        }
+        if (conn) conn.release();
     }
 };
 
-/**
- * LOGIN CONTROLLER
- */
 export const login = async (req, res) => {
     const { email, password } = req.body;
     let conn;
 
     try {
         conn = await pool.getConnection();
-        const users = await conn.query("SELECT * FROM Users WHERE email = ?", [email]);
+        const users = await conn.query(SELECT_USER_BY_EMAIL, [email]);
 
-        if (users.length === 0) {
-            return res.status(401).json({ success: false, message: "Invalid credentials" });
+        if (!users.length) {
+            return res.status(401).json({ success: false, message: "Invalid credentials." });
         }
 
         const user = users[0];
-        const isMatch = await bcrypt.compare(password, user.password_hash);
-
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: "Invalid credentials" });
+        if (!user.is_active) {
+            return res.status(403).json({ success: false, message: "Account is deactivated. Contact admin." });
         }
 
-        return await new Promise((resolve) => {
-            const token = jwt.sign(
-                { user_id: user.user_id, role: user.role },
-                process.env.JWT_SECRET,
-                { expiresIn: '1d' }
-            );
+        if (!await bcrypt.compare(password, user.password_hash)) {
+            return res.status(401).json({ success: false, message: "Invalid credentials." });
+        }
 
-            res.status(200).json({
-                success: true,
-                message: "Login successful",
-                token,
-                role: user.role
-            });
-            resolve();
-        });
+        const token = signToken(user.user_id, user.role);
+        const { password_hash, ...userPublic } = user;
+        return ok(res, { ...userPublic, token });
 
     } catch (err) {
-        if (!res.headersSent) {
-            return res.status(500).json({ success: false, error: err.message });
-        }
+        return res.status(500).json({ success: false, message: "Internal server error." });
     } finally {
         if (conn) conn.release();
+    }
+};
+
+export const getMe = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_AUTH_USER_BY_ID, [req.user.user_id]);
+
+        if (!rows.length) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        return res.status(200).json({ success: true, data: rows[0] });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
     }
 };

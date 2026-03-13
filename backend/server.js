@@ -1,11 +1,11 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import authRoutes from './routes/authRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-import seekerRoutes from './routes/seekerRoutes.js';
-import employerRoutes from './routes/employerRoutes.js';
-import generalRoutes from './routes/generalRoutes.js';
+import authRoutes from './routes/auth/auth.routes.js';
+import adminRoutes from './routes/admin/admin.routes.js';
+import seekerRoutes from './routes/seeker/seeker.routes.js';
+import employerRoutes from './routes/employer/employer.routes.js';
+import publicRoutes from './routes/public/public.routes.js';
 
 dotenv.config();
 const app = express();
@@ -20,8 +20,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/seeker', seekerRoutes);
 app.use('/api/employer', employerRoutes);
-app.use('/api/public', generalRoutes); // public routes
-app.use('/uploads', express.static('uploads'));
+app.use('/api/public', publicRoutes);
 
 
 BigInt.prototype.toJSON = function() {       
