@@ -1,124 +1,88 @@
-/**
- * ==========================================
- * MAIN APP COMPONENT - Job Portal Application
- * ==========================================
- * 
- * Root component that sets up:
- * - React Router for navigation
- * - Auth Provider for global auth state
- * - Toast notifications
- * - All route definitions
- */
+import React, { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { AuthProvider } from '@/hooks/useAuth';
-
-// Page Imports
-import LandingPage from '@/pages/LandingPage';
-import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
-
-// Seeker Pages
-import SeekerDashboard from '@/pages/seeker/Dashboard';
-import SeekerProfile from '@/pages/seeker/Profile';
-import JobSearch from '@/pages/seeker/JobSearch';
-import JobDetails from '@/pages/seeker/JobDetails';
-import MyApplications from '@/pages/seeker/MyApplications';
-
-// Employer Pages
-import EmployerDashboard from '@/pages/employer/Dashboard';
-import CompanyProfile from '@/pages/employer/CompanyProfile';
-import ManageJobs from '@/pages/employer/ManageJobs';
-import PostJob from '@/pages/employer/PostJob';
-import EditJob from '@/pages/employer/EditJob';
-import ApplicationsReceived from '@/pages/employer/ApplicationsReceived';
-import ApplicantDetails from '@/pages/employer/ApplicantDetails';
-
-// Admin Pages
-import AdminDashboard from '@/pages/admin/Dashboard';
-import AllJobs from '@/pages/admin/AllJobs';
-import JobsToVerify from '@/pages/admin/JobsToVerify';
-import TotalUsers from '@/pages/admin/TotalUsers';
-
-// Protected Route Component
-import ProtectedRoute from '@/components/ProtectedRoute';
-
-/**
- * Main App Component
- * Configures routing and global providers
- */
-function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        {/* Toast notifications */}
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: 'rgba(26, 26, 37, 0.95)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              color: '#fff',
-            },
-          }}
-        />
-        
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          
-          {/* Seeker Routes - Protected */}
-          <Route path="/seeker/*" element={
-            <ProtectedRoute allowedRoles={['jobseeker']}>
-              <Routes>
-                <Route path="dashboard" element={<SeekerDashboard />} />
-                <Route path="profile" element={<SeekerProfile />} />
-                <Route path="jobs" element={<JobSearch />} />
-                <Route path="jobs/:jobId" element={<JobDetails />} />
-                <Route path="applications" element={<MyApplications />} />
-                <Route path="*" element={<Navigate to="/seeker/dashboard" replace />} />
-              </Routes>
-            </ProtectedRoute>
-          } />
-          
-          {/* Employer Routes - Protected */}
-          <Route path="/employer/*" element={
-            <ProtectedRoute allowedRoles={['employer']}>
-              <Routes>
-                <Route path="dashboard" element={<EmployerDashboard />} />
-                <Route path="profile" element={<CompanyProfile />} />
-                <Route path="jobs" element={<ManageJobs />} />
-                <Route path="jobs/post" element={<PostJob />} />
-                <Route path="jobs/edit/:jobId" element={<EditJob />} />
-                <Route path="applications" element={<ApplicationsReceived />} />
-                <Route path="applications/:jobId" element={<ApplicantDetails />} />
-                <Route path="*" element={<Navigate to="/employer/dashboard" replace />} />
-              </Routes>
-            </ProtectedRoute>
-          } />
-          
-          {/* Admin Routes - Protected */}
-          <Route path="/admin/*" element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <Routes>
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="jobs" element={<AllJobs />} />
-                <Route path="verify" element={<JobsToVerify />} />
-                <Route path="users" element={<TotalUsers />} />
-                <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-              </Routes>
-            </ProtectedRoute>
-          } />
-          
-          {/* Catch all - redirect to landing */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  );
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
 }
 
-export default App;
+import { Layout } from './components/Layout';
+import { ToastProvider } from './components/Toast';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+
+const Home = lazy(() => import('./pages/Home').then((module) => ({ default: module.Home })));
+const ExploreJobs = lazy(() => import('./pages/ExploreJobs').then((module) => ({ default: module.ExploreJobs })));
+const JobDetail = lazy(() => import('./pages/jobs/JobDetail').then((module) => ({ default: module.JobDetail })));
+const EmployerDetail = lazy(() => import('./pages/jobs/EmployerDetail').then((module) => ({ default: module.EmployerDetail })));
+const Auth = lazy(() => import('./pages/Auth').then((module) => ({ default: module.Auth })));
+const Applications = lazy(() => import('./pages/Applications').then((module) => ({ default: module.Applications })));
+const SavedJobs = lazy(() => import('./pages/SavedJobs').then((module) => ({ default: module.SavedJobs })));
+
+const SeekerDashboard = lazy(() => import('./pages/dashboard/SeekerDashboard').then((module) => ({ default: module.SeekerDashboard })));
+const EmployerDashboard = lazy(() => import('./pages/dashboard/EmployerDashboard').then((module) => ({ default: module.EmployerDashboard })));
+const AdminDashboard = lazy(() => import('./pages/dashboard/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+const AdminUserDetail = lazy(() => import('./pages/dashboard/AdminUserDetail').then((module) => ({ default: module.AdminUserDetail })));
+const AdminJobDetail = lazy(() => import('./pages/dashboard/AdminJobDetail').then((module) => ({ default: module.AdminJobDetail })));
+
+const SeekerProfile = lazy(() => import('./pages/profile/SeekerProfile').then((module) => ({ default: module.SeekerProfile })));
+const EmployerProfile = lazy(() => import('./pages/profile/EmployerProfile').then((module) => ({ default: module.EmployerProfile })));
+
+const RouteFallback: React.FC = () => (
+  <section className="pt-28 pb-16 px-6 min-h-screen">
+    <div className="max-w-6xl mx-auto">
+      <div className="glass-card p-8 space-y-3">
+        {[1, 2, 3, 4].map((index) => (
+          <div key={index} className="h-12 rounded-xl bg-white/5 animate-pulse" />
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+export default function App() {
+  return (
+    <Router>
+      <ScrollToTop />
+      <AuthProvider>
+      <ToastProvider>
+      <Layout>
+        <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/explore-jobs" element={<ProtectedRoute><ExploreJobs /></ProtectedRoute>} />
+          <Route path="/jobs/:jobId" element={<ProtectedRoute><JobDetail /></ProtectedRoute>} />
+          <Route path="/employers/:employerId" element={<ProtectedRoute><EmployerDetail /></ProtectedRoute>} />
+          <Route path="/login"    element={<Auth />} />
+          <Route path="/register" element={<Auth />} />
+          <Route path="/admin"    element={<Auth />} />
+
+
+          {/* Canonical role-classified dashboard routes */}
+          <Route path="/seeker/dashboard"   element={<ProtectedRoute roles={['jobseeker']}><SeekerDashboard /></ProtectedRoute>} />
+          <Route path="/seeker/applications" element={<ProtectedRoute roles={['jobseeker']}><Applications /></ProtectedRoute>} />
+          <Route path="/seeker/saved-jobs" element={<ProtectedRoute roles={['jobseeker']}><SavedJobs /></ProtectedRoute>} />
+          <Route path="/employer/dashboard" element={<ProtectedRoute roles={['employer']}><EmployerDashboard /></ProtectedRoute>} />
+          <Route path="/admin/dashboard"    element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/users/:userId" element={<ProtectedRoute roles={['admin']}><AdminUserDetail /></ProtectedRoute>} />
+          <Route path="/admin/jobs/:jobId" element={<ProtectedRoute roles={['admin']}><AdminJobDetail /></ProtectedRoute>} />
+
+          <Route path="/seeker/profile"   element={<ProtectedRoute roles={['jobseeker']}><SeekerProfile /></ProtectedRoute>} />
+          <Route path="/employer/profile" element={<ProtectedRoute roles={['employer']}><EmployerProfile /></ProtectedRoute>} />
+
+          {/* Compatibility redirects for newer dashboard URLs */}
+          <Route path="/dashboard/seeker" element={<Navigate to="/seeker/dashboard" replace />} />
+          <Route path="/dashboard/employer" element={<Navigate to="/employer/dashboard" replace />} />
+          <Route path="/dashboard/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/users" element={<Navigate to="/admin/dashboard?tab=users" replace />} />
+          <Route path="/admin/jobs" element={<Navigate to="/admin/dashboard?tab=jobs" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        </Suspense>
+      </Layout>
+      </ToastProvider>
+      </AuthProvider>
+    </Router>
+  );
+}

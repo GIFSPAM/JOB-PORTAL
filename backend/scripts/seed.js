@@ -9,21 +9,133 @@ const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@12345';
 const EMPLOYER_PASSWORD = process.env.SEED_EMPLOYER_PASSWORD || 'Employer@12345';
 const SEEKER_PASSWORD = process.env.SEED_SEEKER_PASSWORD || 'Seeker@12345';
 
-const EMPLOYER_COUNT = Number(process.env.SEED_EMPLOYERS || 3);
-const SEEKER_COUNT = Number(process.env.SEED_SEEKERS || 6);
-const JOBS_PER_EMPLOYER = Number(process.env.SEED_JOBS_PER_EMPLOYER || 3);
-const APPS_PER_SEEKER = Number(process.env.SEED_APPS_PER_SEEKER || 3);
-
 const RUN_ID = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-const SKILLS_POOL = [
-    'javascript', 'typescript', 'node.js', 'express', 'react', 'sql', 'mariadb',
-    'docker', 'aws', 'python', 'java', 'rest', 'git', 'redis', 'testing'
+const DEFAULT_EMPLOYER_PROFILES = [
+    {
+        company_name: 'Northstar Labs',
+        industry: 'SaaS',
+        company_size: '51-200',
+        company_location: 'Remote',
+        company_website: 'https://northstar-labs.example.com',
+        company_phone: '5551000001'
+    },
+    {
+        company_name: 'Bluefin Retail Tech',
+        industry: 'E-commerce',
+        company_size: '201-500',
+        company_location: 'Austin',
+        company_website: 'https://bluefin-retail.example.com',
+        company_phone: '5551000002'
+    },
+    {
+        company_name: 'CloudHarbor Systems',
+        industry: 'Cloud Infrastructure',
+        company_size: '11-50',
+        company_location: 'New York',
+        company_website: 'https://cloudharbor.example.com',
+        company_phone: '5551000003'
+    }
 ];
 
-const LOCATIONS = ['Remote', 'New York', 'San Francisco', 'Austin', 'Chicago'];
-const JOB_TYPES = ['full_time', 'part_time', 'internship'];
-const STATUSES = ['shortlisted', 'rejected', 'hired'];
+const DEFAULT_JOB_TEMPLATES = [
+    {
+        title: 'Backend Engineer',
+        description: 'Build API features, optimize SQL queries, and maintain reliable production services.',
+        location: 'Remote',
+        job_type: 'full_time',
+        salary_min: 70000,
+        salary_max: 95000,
+        skills: ['node.js', 'express', 'sql', 'mariadb', 'docker'],
+        required_experience: 3
+    },
+    {
+        title: 'Frontend Engineer',
+        description: 'Implement performant UI flows and collaborate with product/design teams on customer features.',
+        location: 'San Francisco',
+        job_type: 'full_time',
+        salary_min: 68000,
+        salary_max: 92000,
+        skills: ['react', 'typescript', 'javascript', 'testing'],
+        required_experience: 2
+    },
+    {
+        title: 'Junior QA Analyst',
+        description: 'Write and execute test plans, report defects, and support release quality checks.',
+        location: 'Chicago',
+        job_type: 'part_time',
+        salary_min: 32000,
+        salary_max: 48000,
+        skills: ['testing', 'javascript', 'git'],
+        required_experience: 1
+    },
+    {
+        title: 'Cloud Platform Intern',
+        description: 'Support internal tooling and monitoring dashboards for platform reliability projects.',
+        location: 'Austin',
+        job_type: 'internship',
+        salary_min: 20000,
+        salary_max: 28000,
+        skills: ['python', 'aws', 'git'],
+        required_experience: 0
+    }
+];
+
+const DEFAULT_SEEKER_PROFILES = [
+    {
+        full_name: 'Arjun Patel',
+        education: "Bachelor's",
+        experience_years: 4,
+        phone_number: '7771000001',
+        skills: ['node.js', 'express', 'sql', 'docker', 'git']
+    },
+    {
+        full_name: 'Maya Thompson',
+        education: "Master's",
+        experience_years: 3,
+        phone_number: '7771000002',
+        skills: ['react', 'typescript', 'javascript', 'testing']
+    },
+    {
+        full_name: 'Ethan Brooks',
+        education: "Bachelor's",
+        experience_years: 1,
+        phone_number: '7771000003',
+        skills: ['testing', 'javascript', 'git']
+    },
+    {
+        full_name: 'Noah Reed',
+        education: 'Diploma',
+        experience_years: 0,
+        phone_number: '7771000004',
+        skills: ['python', 'aws', 'git']
+    },
+    {
+        full_name: 'Sofia Lin',
+        education: "Master's",
+        experience_years: 5,
+        phone_number: '7771000005',
+        skills: ['node.js', 'sql', 'mariadb', 'aws', 'docker']
+    },
+    {
+        full_name: 'Daniel Cruz',
+        education: "Bachelor's",
+        experience_years: 2,
+        phone_number: '7771000006',
+        skills: ['react', 'javascript', 'git', 'testing']
+    }
+];
+
+function readPositiveInt(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
+    return parsed;
+}
+
+const EMPLOYER_COUNT = readPositiveInt(process.env.SEED_EMPLOYERS, DEFAULT_EMPLOYER_PROFILES.length);
+const SEEKER_COUNT = readPositiveInt(process.env.SEED_SEEKERS, DEFAULT_SEEKER_PROFILES.length);
+const JOBS_PER_EMPLOYER = readPositiveInt(process.env.SEED_JOBS_PER_EMPLOYER, 2);
+const APPS_PER_SEEKER = readPositiveInt(process.env.SEED_APPS_PER_SEEKER, 2);
 
 const summary = {
     users: { admins: 0, employers: 0, seekers: 0 },
@@ -31,8 +143,16 @@ const summary = {
     resumesUploaded: 0,
     skillsUpdated: 0,
     savedJobs: 0,
-    applications: { submitted: 0, statusUpdated: 0 }
+    applications: {
+        submitted: 0,
+        statusUpdated: 0,
+        hired: 0,
+        shortlisted: 0,
+        rejected: 0
+    }
 };
+
+const hiredByJob = new Map();
 
 const ensureNumber = (value) => Number(value ?? 0);
 const unwrapData = (payload) => payload?.data ?? payload;
@@ -47,18 +167,22 @@ function getUserId(payload) {
     return ensureNumber(data?.user_id);
 }
 
-function sample(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
+function getSeedItem(items, index) {
+    return items[index % items.length];
 }
 
-function pickUnique(arr, count) {
-    const copy = [...arr];
-    const out = [];
-    while (copy.length && out.length < count) {
-        const idx = Math.floor(Math.random() * copy.length);
-        out.push(copy.splice(idx, 1)[0]);
-    }
-    return out;
+function normalizeSkillName(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function uniqueSkills(values) {
+    return [...new Set(values.map(normalizeSkillName).filter(Boolean))];
+}
+
+function getProficiency(experienceYears, order) {
+    if (experienceYears >= 5 && order < 2) return 'advanced';
+    if (experienceYears >= 2) return order === 0 ? 'advanced' : 'intermediate';
+    return order === 0 ? 'intermediate' : 'beginner';
 }
 
 async function api(path, { method = 'GET', token, json, formData, expected = [200] } = {}) {
@@ -95,6 +219,35 @@ function makePdfBlob() {
     return new Blob([minimalPdf], { type: 'application/pdf' });
 }
 
+function buildEmployerProfile(index) {
+    const base = getSeedItem(DEFAULT_EMPLOYER_PROFILES, index);
+    const cycle = Math.floor(index / DEFAULT_EMPLOYER_PROFILES.length);
+    const suffix = cycle > 0 ? ` ${cycle + 1}` : '';
+
+    return {
+        company_name: `${base.company_name}${suffix}`,
+        industry: base.industry,
+        company_size: base.company_size,
+        company_location: base.company_location,
+        company_website: base.company_website,
+        company_phone: `${base.company_phone.slice(0, 7)}${String(index + 1).padStart(3, '0')}`
+    };
+}
+
+function buildSeekerProfile(index) {
+    const base = getSeedItem(DEFAULT_SEEKER_PROFILES, index);
+    const cycle = Math.floor(index / DEFAULT_SEEKER_PROFILES.length);
+    const suffix = cycle > 0 ? ` ${cycle + 1}` : '';
+
+    return {
+        full_name: `${base.full_name}${suffix}`,
+        education: base.education,
+        experience_years: base.experience_years,
+        phone_number: `${base.phone_number.slice(0, 7)}${String(index + 1).padStart(3, '0')}`,
+        skills: uniqueSkills(base.skills)
+    };
+}
+
 async function registerAndLoginAdmin() {
     const email = `admin.seed.${RUN_ID}@example.com`;
 
@@ -122,6 +275,7 @@ async function registerAndLoginAdmin() {
 }
 
 async function registerAndLoginEmployer(index) {
+    const profile = buildEmployerProfile(index);
     const email = `employer${index}.seed.${RUN_ID}@example.com`;
 
     await api('/api/auth/register', {
@@ -130,12 +284,12 @@ async function registerAndLoginEmployer(index) {
             email,
             password: EMPLOYER_PASSWORD,
             role: 'employer',
-            company_name: `Seed Company ${index} ${RUN_ID}`,
-            industry: 'Software',
-            company_size: sample(['11-50', '51-200', '201-500']),
-            company_location: sample(LOCATIONS),
-            company_website: `https://seed-company-${index}.example.com`,
-            company_phone: `555000${String(index).padStart(4, '0')}`
+            company_name: profile.company_name,
+            industry: profile.industry,
+            company_size: profile.company_size,
+            company_location: profile.company_location,
+            company_website: profile.company_website,
+            company_phone: profile.company_phone
         },
         expected: [201]
     });
@@ -149,10 +303,11 @@ async function registerAndLoginEmployer(index) {
     summary.users.employers += 1;
     const token = getToken(login.payload);
     if (!token) throw new Error('Employer login did not return token.');
-    return { token, userId: getUserId(login.payload), email };
+    return { token, userId: getUserId(login.payload), email, index, profile };
 }
 
 async function registerAndLoginSeeker(index) {
+    const profile = buildSeekerProfile(index);
     const email = `seeker${index}.seed.${RUN_ID}@example.com`;
 
     await api('/api/auth/register', {
@@ -161,10 +316,10 @@ async function registerAndLoginSeeker(index) {
             email,
             password: SEEKER_PASSWORD,
             role: 'jobseeker',
-            full_name: `Seed Seeker ${index}`,
-            education: sample(['Bachelor\'s', 'Master\'s', 'Diploma']),
-            experience_years: index % 6,
-            phone_number: `777000${String(index).padStart(4, '0')}`
+            full_name: profile.full_name,
+            education: profile.education,
+            experience_years: profile.experience_years,
+            phone_number: profile.phone_number
         },
         expected: [201]
     });
@@ -178,31 +333,35 @@ async function registerAndLoginSeeker(index) {
     summary.users.seekers += 1;
     const token = getToken(login.payload);
     if (!token) throw new Error('Seeker login did not return token.');
-    return { token, userId: getUserId(login.payload), email };
+    return { token, userId: getUserId(login.payload), email, profile };
 }
 
 async function createJobsForEmployer(employer, adminToken) {
     const jobs = [];
+    const perEmployerCount = Math.min(JOBS_PER_EMPLOYER, DEFAULT_JOB_TEMPLATES.length);
 
-    for (let i = 1; i <= JOBS_PER_EMPLOYER; i += 1) {
-        const skills = pickUnique(SKILLS_POOL, 3 + (i % 2));
+    for (let i = 0; i < perEmployerCount; i += 1) {
+        const template = getSeedItem(DEFAULT_JOB_TEMPLATES, employer.index + i);
+        const title = `${template.title} - ${employer.profile.company_name}`;
 
         const created = await api('/api/employer/post', {
             method: 'POST',
             token: employer.token,
             json: {
-                title: `Seed ${sample(['Backend', 'Frontend', 'Fullstack'])} Engineer ${i} (${RUN_ID})`,
-                description: 'Auto-generated test job created by seed script.',
-                location: sample(LOCATIONS),
-                job_type: sample(JOB_TYPES),
-                salary_min: 45000 + i * 1500,
-                salary_max: 70000 + i * 3000,
-                skills
+                title,
+                description: template.description,
+                location: template.location,
+                job_type: template.job_type,
+                salary_min: template.salary_min,
+                salary_max: template.salary_max,
+                skills: uniqueSkills(template.skills)
             },
             expected: [201]
         });
 
-        const jobId = ensureNumber(created.payload.job_id);
+        const jobId = ensureNumber(created.payload.job_id || created.payload.data?.job_id);
+        if (!jobId) throw new Error('Job creation response did not include a job_id.');
+
         summary.jobs.created += 1;
 
         await api(`/api/admin/verify-job/${jobId}`, {
@@ -212,7 +371,13 @@ async function createJobsForEmployer(employer, adminToken) {
         });
 
         summary.jobs.verified += 1;
-        jobs.push({ jobId, employerToken: employer.token });
+        jobs.push({
+            jobId,
+            employerToken: employer.token,
+            title,
+            skills: uniqueSkills(template.skills),
+            requiredExperience: template.required_experience
+        });
     }
 
     return jobs;
@@ -232,15 +397,17 @@ async function uploadSeekerResume(seeker) {
     summary.resumesUploaded += 1;
 }
 
-async function updateSeekerSkills(seeker, index) {
-    const chosen = pickUnique(SKILLS_POOL, 4 + (index % 2));
-    const prof = ['beginner', 'intermediate', 'advanced'];
+async function updateSeekerSkills(seeker) {
+    const chosen = seeker.profile.skills;
 
     await api('/api/seeker/skills', {
         method: 'PUT',
         token: seeker.token,
         json: {
-            skills: chosen.map((name, i) => ({ name, proficiency: prof[i % prof.length] }))
+            skills: chosen.map((name, order) => ({
+                name,
+                proficiency: getProficiency(seeker.profile.experience_years, order)
+            }))
         },
         expected: [200]
     });
@@ -248,16 +415,68 @@ async function updateSeekerSkills(seeker, index) {
     summary.skillsUpdated += 1;
 }
 
-async function seekerSavesAndApplies(seeker, availableJobs) {
-    const targetJobs = pickUnique(availableJobs, Math.min(APPS_PER_SEEKER, availableJobs.length));
+function rankJobsForSeeker(seeker, availableJobs) {
+    const seekerSkillSet = new Set(uniqueSkills(seeker.profile.skills));
 
-    for (const target of targetJobs) {
-        await api(`/api/seeker/saved-jobs/${target.jobId}`, {
+    const scored = availableJobs.map((job) => {
+        const overlap = job.skills.filter((skill) => seekerSkillSet.has(skill)).length;
+        const matchRatio = job.skills.length ? overlap / job.skills.length : 0;
+        const experienceDelta = seeker.profile.experience_years - job.requiredExperience;
+        const weightedScore = Number((matchRatio * 0.85 + Math.max(-0.2, Math.min(0.2, experienceDelta * 0.05))).toFixed(4));
+
+        return {
+            ...job,
+            overlap,
+            matchRatio,
+            weightedScore
+        };
+    });
+
+    scored.sort((a, b) => b.weightedScore - a.weightedScore);
+    return scored;
+}
+
+function pickApplicationStatus(seeker, rankedJob, seekerAlreadyHired) {
+    const jobAlreadyHasHire = hiredByJob.get(rankedJob.jobId) === true;
+    const isHighMatch = rankedJob.matchRatio >= 0.8;
+    const isGoodMatch = rankedJob.matchRatio >= 0.5;
+    const hasRequiredExperience = seeker.profile.experience_years >= rankedJob.requiredExperience;
+
+    if (!jobAlreadyHasHire && !seekerAlreadyHired && isHighMatch && hasRequiredExperience) {
+        hiredByJob.set(rankedJob.jobId, true);
+        summary.applications.hired += 1;
+        return 'hired';
+    }
+    if (isGoodMatch) {
+        summary.applications.shortlisted += 1;
+        return 'shortlisted';
+    }
+
+    summary.applications.rejected += 1;
+    return 'rejected';
+}
+
+async function seekerSavesAndApplies(seeker, availableJobs) {
+    const rankedJobs = rankJobsForSeeker(seeker, availableJobs);
+    const saveLimit = Math.min(APPS_PER_SEEKER + 1, rankedJobs.length);
+    const applyLimit = Math.min(APPS_PER_SEEKER, rankedJobs.length);
+
+    for (const target of rankedJobs.slice(0, saveLimit)) {
+        const saved = await api(`/api/seeker/saved-jobs/${target.jobId}`, {
             method: 'POST',
             token: seeker.token,
             expected: [201, 409]
         });
-        summary.savedJobs += 1;
+        if (saved.status === 201) summary.savedJobs += 1;
+    }
+
+    const applyTargets = rankedJobs
+        .filter((job) => job.overlap > 0)
+        .slice(0, applyLimit);
+
+    let seekerAlreadyHired = false;
+
+    for (const target of applyTargets) {
 
         const applied = await api(`/api/seeker/apply/${target.jobId}`, {
             method: 'POST',
@@ -269,12 +488,15 @@ async function seekerSavesAndApplies(seeker, availableJobs) {
             summary.applications.submitted += 1;
             const appId = ensureNumber(applied.payload.data?.application_id);
             if (appId) {
+                const status = pickApplicationStatus(seeker, target, seekerAlreadyHired);
                 await api(`/api/employer/application-status/${appId}`, {
                     method: 'PATCH',
                     token: target.employerToken,
-                    json: { status: sample(STATUSES) },
-                    expected: [200, 403]
+                    json: { status },
+                    expected: [200]
                 });
+
+                if (status === 'hired') seekerAlreadyHired = true;
                 summary.applications.statusUpdated += 1;
             }
         }
@@ -296,12 +518,12 @@ async function runSeed() {
     const admin = await registerAndLoginAdmin();
 
     const employers = [];
-    for (let i = 1; i <= EMPLOYER_COUNT; i += 1) {
+    for (let i = 0; i < EMPLOYER_COUNT; i += 1) {
         employers.push(await registerAndLoginEmployer(i));
     }
 
     const seekers = [];
-    for (let i = 1; i <= SEEKER_COUNT; i += 1) {
+    for (let i = 0; i < SEEKER_COUNT; i += 1) {
         seekers.push(await registerAndLoginSeeker(i));
     }
 
@@ -314,8 +536,10 @@ async function runSeed() {
     for (let i = 0; i < seekers.length; i += 1) {
         const seeker = seekers[i];
         await uploadSeekerResume(seeker);
-        await updateSeekerSkills(seeker, i);
-        await seekerSavesAndApplies(seeker, jobs);
+        await updateSeekerSkills(seeker);
+        if (jobs.length) {
+            await seekerSavesAndApplies(seeker, jobs);
+        }
 
         if (jobs.length) {
             await api(`/api/seeker/job-match/${jobs[0].jobId}`, {
@@ -343,9 +567,12 @@ async function runSeed() {
         jobs_verified: summary.jobs.verified,
         resumes_uploaded: summary.resumesUploaded,
         seeker_skills_updated: summary.skillsUpdated,
-        jobs_saved_attempted: summary.savedJobs,
+        jobs_saved: summary.savedJobs,
         applications_submitted: summary.applications.submitted,
-        application_status_updates: summary.applications.statusUpdated
+        application_status_updates: summary.applications.statusUpdated,
+        applications_hired: summary.applications.hired,
+        applications_shortlisted: summary.applications.shortlisted,
+        applications_rejected: summary.applications.rejected
     });
 }
 

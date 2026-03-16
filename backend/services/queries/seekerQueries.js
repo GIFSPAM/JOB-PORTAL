@@ -6,7 +6,7 @@ export const INSERT_APPLICATION = `
 `;
 
 export const SELECT_SEEKER_APPLICATIONS = `
-    SELECT a.application_id, a.status, a.applied_at, j.title, e.company_name, j.job_id
+    SELECT a.application_id, a.status, a.applied_at, j.title, e.company_name, j.job_id, j.employer_id
     FROM Applications a
     JOIN Jobs j ON a.job_id = j.job_id
     JOIN Employers e ON j.employer_id = e.employer_id
