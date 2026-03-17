@@ -204,6 +204,7 @@ export const AdminJobDetail: React.FC = () => {
               <DetailFieldCard label="Job ID" value={job.job_id} />
               <DetailFieldCard label="Company" value={<span className="inline-flex items-center gap-2"><Building2 className="w-4 h-4 text-yellow-400" />{job.company_name ?? 'Unknown'}</span>} />
               <DetailFieldCard label="Location" value={<span className="inline-flex items-center gap-2"><MapPin className="w-4 h-4 text-brand-accent" />{job.location ?? 'Not added'}</span>} />
+              <DetailFieldCard label="Job Type" value={<span className="inline-flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-400" />{job.job_type ?? 'Not specified'}</span>} />
               <DetailFieldCard label="Posted" value={<span className="inline-flex items-center gap-2"><CalendarClock className="w-4 h-4 text-white/70" />{formatDateTime(job.posted_at)}</span>} />
               <DetailFieldCard
                 label="Company Website"

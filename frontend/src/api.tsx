@@ -2,6 +2,14 @@ import axios, { AxiosError } from 'axios';
 import { Job } from './types/job';
 import type { RegisterPayload } from './types/api';
 import type { BackendRole, Role } from './types/auth';
+import type {
+  SavedJob,
+  SeekerApplication,
+  SeekerOverview,
+  SeekerProfile,
+  SeekerStats,
+} from './types/seeker';
+import { normalizeSeekerStats } from './utils/seekerStats';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
@@ -138,18 +146,42 @@ export const registerAPI = async (payload: RegisterPayload): Promise<any> => {
 };
 
 // ─── Seeker ────────────────────────────────────────────────────────────────
-export const fetchSeekerStats = async (): Promise<any> => {
-  try { const { data: p } = await api.get('/seeker/stats'); return p?.data ?? {}; }
+export const fetchSeekerStats = async (): Promise<SeekerStats> => {
+  try {
+    const { data: p } = await api.get('/seeker/stats');
+    return normalizeSeekerStats(p?.data);
+  }
   catch (err) { throw new Error(extractError(err, 'Failed to fetch stats')); }
 };
 
-export const fetchSeekerApplications = async (): Promise<any[]> => {
-  try { const { data: p } = await api.get('/seeker/my-applications'); return Array.isArray(p?.data) ? p.data : []; }
+export const fetchSeekerApplications = async (): Promise<SeekerApplication[]> => {
+  try {
+    const { data: p } = await api.get('/seeker/my-applications');
+    const items = Array.isArray(p?.data) ? p.data : [];
+    return items.map((item: Record<string, unknown>) => ({
+      ...item,
+      application_id: Number(item.application_id),
+      job_id: item.job_id != null ? Number(item.job_id) : undefined,
+    })) as SeekerApplication[];
+  }
   catch (err) { throw new Error(extractError(err, 'Failed to fetch applications')); }
 };
 
-export const fetchSeekerProfile = async (): Promise<any> => {
-  try { const { data: p } = await api.get('/seeker/profile'); return p?.data ?? {}; }
+export const fetchSeekerProfile = async (): Promise<SeekerProfile> => {
+  try {
+    const { data: p } = await api.get('/seeker/profile');
+    const raw = p?.data;
+    if (!raw || typeof raw !== 'object') return {};
+    return {
+      ...(raw as Record<string, unknown>),
+      skills: Array.isArray((raw as Record<string, unknown>).skills)
+        ? ((raw as Record<string, unknown>).skills as Array<Record<string, unknown>>).map((skill) => ({
+            name: String(skill.name ?? ''),
+            proficiency: String(skill.proficiency ?? 'beginner'),
+          }))
+        : [],
+    } as SeekerProfile;
+  }
   catch (err) { throw new Error(extractError(err, 'Failed to fetch profile')); }
 };
 
@@ -167,9 +199,33 @@ export const updateSeekerProfile = async (payload: {
   }
 };
 
-export const fetchSeekerSavedJobs = async (): Promise<any[]> => {
-  try { const { data: p } = await api.get('/seeker/saved-jobs'); return Array.isArray(p?.data) ? p.data : []; }
+export const fetchSeekerSavedJobs = async (): Promise<SavedJob[]> => {
+  try {
+    const { data: p } = await api.get('/seeker/saved-jobs');
+    const items = Array.isArray(p?.data) ? p.data : [];
+    return items.map((item: Record<string, unknown>) => ({
+      ...item,
+      job_id: Number(item.job_id),
+      skills: Array.isArray(item.skills) ? item.skills.map((skill) => String(skill)) : [],
+    })) as SavedJob[];
+  }
   catch (err) { throw new Error(extractError(err, 'Failed to fetch saved jobs')); }
+};
+
+export const fetchSeekerOverview = async (): Promise<SeekerOverview> => {
+  const [stats, applications, profile, savedJobs] = await Promise.all([
+    fetchSeekerStats(),
+    fetchSeekerApplications(),
+    fetchSeekerProfile(),
+    fetchSeekerSavedJobs(),
+  ]);
+
+  return {
+    stats,
+    applications,
+    profile,
+    savedJobs,
+  };
 };
 
 export const applySeekerJob = async (jobId: number): Promise<any> => {
@@ -215,6 +271,38 @@ export const fetchSeekerEmployerDetailsByJob = async (jobId: number): Promise<Em
     return p?.data ?? null;
   } catch (err) {
     throw new Error(extractError(err, 'Failed to fetch employer details'));
+  }
+};
+
+export const fetchJobSkillMatch = async (jobId: number): Promise<{ matchPercentage: number; matchedSkills: string[]; missingSkills: string[] } | null> => {
+  try {
+    const { data: p } = await api.get(`/seeker/job-match/${jobId}`);
+    const raw = p?.data;
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+
+    const source = raw as Record<string, unknown>;
+    const matchPercentageValue = source.matchPercentage ?? source.match_percentage;
+    const matchedSkillsValue = source.matchedSkills ?? source.matched_skills;
+    const missingSkillsValue = source.missingSkills ?? source.missing_skills;
+
+    const numericMatchPercentage =
+      typeof matchPercentageValue === 'number'
+        ? matchPercentageValue
+        : Number(matchPercentageValue ?? 0);
+
+    return {
+      matchPercentage: Number.isFinite(numericMatchPercentage) ? numericMatchPercentage : 0,
+      matchedSkills: Array.isArray(matchedSkillsValue)
+        ? matchedSkillsValue.map((value) => String(value))
+        : [],
+      missingSkills: Array.isArray(missingSkillsValue)
+        ? missingSkillsValue.map((value) => String(value))
+        : [],
+    };
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to fetch job skill match'));
   }
 };
 
@@ -267,6 +355,15 @@ export const updateSeekerResume = async (resumeFile: File): Promise<any> => {
     return p;
   } catch (err) {
     throw new Error(extractError(err, 'Failed to update resume'));
+  }
+};
+
+export const updateSeekerSkills = async (skills: Array<{ name: string; proficiency: string }>): Promise<any> => {
+  try {
+    const { data: p } = await api.put('/seeker/skills', { skills });
+    return p;
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to update skills'));
   }
 };
 

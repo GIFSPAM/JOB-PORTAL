@@ -6,13 +6,15 @@ import { SeekerApplicationsSection, type SeekerApplicationItem } from '../compon
 import { StatCard } from '../components/dashboard/StatCard';
 import { useToast } from '../components/Toast';
 import { PageContainer } from '../components/layout/PageContainer';
+import type { SeekerStats } from '../types/seeker';
+import { decrementStatsAfterRevoke } from '../utils/seekerStats';
 
 export const Applications: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
   const [applications, setApplications] = useState<SeekerApplicationItem[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<SeekerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [revokingApplicationId, setRevokingApplicationId] = useState<number | null>(null);
 
@@ -35,21 +37,7 @@ export const Applications: React.FC = () => {
       const target = applications.find((item) => Number(item.application_id) === Number(applicationId));
       await revokeSeekerApplication(applicationId);
       setApplications((prev) => prev.filter((item) => Number(item.application_id) !== Number(applicationId)));
-      setStats((prev: any) => {
-        if (!prev) return prev;
-        const statusKey = String(target?.status || '').toLowerCase();
-        const currentBucket = Number(prev?.applications_by_status?.[statusKey] ?? 0);
-        return {
-          ...prev,
-          total_applications: Math.max(0, Number(prev.total_applications ?? 0) - 1),
-          applications_by_status: {
-            ...prev.applications_by_status,
-            ...(statusKey
-              ? { [statusKey]: Math.max(0, currentBucket - 1) }
-              : {}),
-          },
-        };
-      });
+      setStats((prev) => decrementStatsAfterRevoke(prev, target?.status));
       toast.success('Application revoked.');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to revoke application';
@@ -131,6 +119,7 @@ export const Applications: React.FC = () => {
         loading={loading}
         revokingApplicationId={revokingApplicationId}
         onRevoke={handleRevokeApplication}
+        onViewJob={(jobId) => navigate(`/jobs/${jobId}`)}
         onBrowseJobs={() => navigate('/explore-jobs')}
       />
     </PageContainer>

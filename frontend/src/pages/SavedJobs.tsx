@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { BookmarkCheck, Building2, MapPin, Trash2 } from 'lucide-react';
+import { BookmarkCheck, Building2, MapPin, Trash2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { fetchSeekerSavedJobs, removeSeekerSavedJob } from '../api';
 import { useToast } from '../components/Toast';
 import { PageContainer } from '../components/layout/PageContainer';
+import { formatJobType } from '../utils/formatters';
 
 export const SavedJobs: React.FC = () => {
   const navigate = useNavigate();
@@ -81,6 +82,19 @@ export const SavedJobs: React.FC = () => {
                       <p className="text-xs text-text-muted mt-1 inline-flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5" /> {job.location ?? 'Remote'}
                       </p>
+                      <p className="text-xs text-text-muted mt-1 inline-flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5" /> {formatJobType(job.job_type)}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {(Array.isArray(job.skills) ? job.skills : []).slice(0, 5).map((skill: string) => (
+                          <span
+                            key={`${id}-${skill}`}
+                            className="px-2 py-1 rounded-full border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-[10px] font-bold"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">

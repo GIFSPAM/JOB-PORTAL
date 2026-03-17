@@ -7,11 +7,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
-  fetchSeekerStats,
-  fetchSeekerApplications,
+  fetchSeekerOverview,
   fetchSeekerProfile,
-  updateSeekerProfile,
-  fetchSeekerSavedJobs,
   downloadSeekerResume,
   updateSeekerResume,
   revokeSeekerApplication,
@@ -19,88 +16,37 @@ import {
 import { SeekerApplicationsSection } from '../../components/dashboard/SeekerApplicationsSection';
 import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
+import type { SavedJob, SeekerApplication, SeekerProfile, SeekerStats } from '../../types/seeker';
+import { decrementStatsAfterRevoke } from '../../utils/seekerStats';
 
 export const SeekerDashboard: React.FC = () => {
   const { logout } = useAuth();
   const navigate   = useNavigate();
   const toast      = useToast();
 
-  const [stats,        setStats]        = useState<any>(null);
-  const [applications, setApplications] = useState<any[]>([]);
-  const [profile,      setProfile]      = useState<any>(null);
-  const [savedJobs,    setSavedJobs]    = useState<any[]>([]);
+  const [stats,        setStats]        = useState<SeekerStats | null>(null);
+  const [applications, setApplications] = useState<SeekerApplication[]>([]);
+  const [profile,      setProfile]      = useState<SeekerProfile | null>(null);
+  const [savedJobs,    setSavedJobs]    = useState<SavedJob[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [resumeDownloading, setResumeDownloading] = useState(false);
   const [resumeUploading, setResumeUploading] = useState(false);
   const [revokingApplicationId, setRevokingApplicationId] = useState<number | null>(null);
-  const [isProfileEditMode, setIsProfileEditMode] = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    full_name: '',
-    education: '',
-    phone_number: '',
-    experience_years: '0',
-  });
   const resumeFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchSeekerStats(), fetchSeekerApplications(), fetchSeekerProfile(), fetchSeekerSavedJobs()])
-      .then(([s, a, p, saved]) => {
-        setStats(s);
-        setApplications(a);
-        setProfile(p);
-        setSavedJobs(saved);
+    fetchSeekerOverview()
+      .then(({ stats: seekerStats, applications: seekerApplications, profile: seekerProfile, savedJobs: seekerSavedJobs }) => {
+        setStats(seekerStats);
+        setApplications(seekerApplications);
+        setProfile(seekerProfile);
+        setSavedJobs(seekerSavedJobs);
       })
       .catch(err => toast.error(err.message))
       .finally(() => setLoading(false));
   }, [toast]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
-
-  const openProfileEditor = () => {
-    setProfileForm({
-      full_name: profile?.full_name ?? '',
-      education: profile?.education ?? '',
-      phone_number: profile?.phone_number ?? '',
-      experience_years: String(profile?.experience_years ?? 0),
-    });
-    setIsProfileEditMode(true);
-  };
-
-  const closeProfileEditor = () => {
-    setIsProfileEditMode(false);
-  };
-
-  const handleProfileFormChange = (field: 'full_name' | 'education' | 'phone_number' | 'experience_years', value: string) => {
-    setProfileForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSaveProfile = async () => {
-    const parsedExperience = Number(profileForm.experience_years);
-    const safeExperience = Number.isFinite(parsedExperience) && parsedExperience >= 0
-      ? Math.floor(parsedExperience)
-      : 0;
-
-    setIsSavingProfile(true);
-    try {
-      await updateSeekerProfile({
-        full_name: profileForm.full_name.trim(),
-        education: profileForm.education.trim(),
-        phone_number: profileForm.phone_number.trim(),
-        experience_years: safeExperience,
-      });
-
-      const refreshedProfile = await fetchSeekerProfile();
-      setProfile(refreshedProfile);
-      setIsProfileEditMode(false);
-      toast.success('Profile updated successfully.');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update profile';
-      toast.error(message);
-    } finally {
-      setIsSavingProfile(false);
-    }
-  };
 
   const handleResumeDownload = async () => {
     setResumeDownloading(true);
@@ -151,21 +97,7 @@ export const SeekerDashboard: React.FC = () => {
       const target = applications.find((item) => Number(item.application_id) === Number(applicationId));
       await revokeSeekerApplication(applicationId);
       setApplications((prev) => prev.filter((item) => Number(item.application_id) !== Number(applicationId)));
-      setStats((prev: any) => {
-        if (!prev) return prev;
-        const statusKey = String(target?.status || '').toLowerCase();
-        const currentBucket = Number(prev?.applications_by_status?.[statusKey] ?? 0);
-        return {
-          ...prev,
-          total_applications: Math.max(0, Number(prev.total_applications ?? 0) - 1),
-          applications_by_status: {
-            ...prev.applications_by_status,
-            ...(statusKey
-              ? { [statusKey]: Math.max(0, currentBucket - 1) }
-              : {}),
-          },
-        };
-      });
+      setStats((prev) => decrementStatsAfterRevoke(prev, target?.status));
       toast.success('Application revoked.');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to revoke application';
@@ -230,20 +162,9 @@ export const SeekerDashboard: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-6">
           <div className="glass-card p-8">
-            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-              <h2 className="text-lg font-display font-bold text-white flex items-center gap-2">
-                <User className="w-5 h-5 text-brand-accent" /> Profile Snapshot
-              </h2>
-              {!loading && (
-                <button
-                  onClick={isProfileEditMode ? closeProfileEditor : openProfileEditor}
-                  disabled={isSavingProfile}
-                  className="inline-flex items-center justify-center min-w-40 px-4 py-2.5 rounded-xl border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-sm font-bold hover:bg-brand-accent/15 transition-all disabled:opacity-60"
-                >
-                  {isProfileEditMode ? 'Close Editor' : 'Update Profile'}
-                </button>
-              )}
-            </div>
+            <h2 className="text-lg font-display font-bold text-white flex items-center gap-2 mb-6">
+              <User className="w-5 h-5 text-brand-accent" /> Profile Snapshot
+            </h2>
 
             {loading ? (
               <div className="space-y-3">
@@ -254,75 +175,25 @@ export const SeekerDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Full Name</p>
-                    {isProfileEditMode ? (
-                      <input
-                        value={profileForm.full_name}
-                        onChange={(event) => handleProfileFormChange('full_name', event.target.value)}
-                        placeholder="Your full name"
-                        className="input-field h-11"
-                      />
-                    ) : (
-                      <p className="text-white font-medium">{profile?.full_name ?? 'Not added'}</p>
-                    )}
+                    <p className="text-white font-medium">{profile?.full_name ?? 'Not added'}</p>
                   </div>
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2 flex items-center gap-2">
                       <GraduationCap className="w-4 h-4" /> Education
                     </p>
-                    {isProfileEditMode ? (
-                      <input
-                        value={profileForm.education}
-                        onChange={(event) => handleProfileFormChange('education', event.target.value)}
-                        placeholder="Your education"
-                        className="input-field h-11"
-                      />
-                    ) : (
-                      <p className="text-white font-medium">{profile?.education ?? 'Not added'}</p>
-                    )}
+                    <p className="text-white font-medium">{profile?.education ?? 'Not added'}</p>
                   </div>
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2 flex items-center gap-2">
                       <Phone className="w-4 h-4" /> Phone
                     </p>
-                    {isProfileEditMode ? (
-                      <input
-                        value={profileForm.phone_number}
-                        onChange={(event) => handleProfileFormChange('phone_number', event.target.value)}
-                        placeholder="Your phone number"
-                        className="input-field h-11"
-                      />
-                    ) : (
-                      <p className="text-white font-medium">{profile?.phone_number ?? 'Not added'}</p>
-                    )}
+                    <p className="text-white font-medium">{profile?.phone_number ?? 'Not added'}</p>
                   </div>
-
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Experience</p>
-                    {isProfileEditMode ? (
-                      <input
-                        type="number"
-                        min={0}
-                        value={profileForm.experience_years}
-                        onChange={(event) => handleProfileFormChange('experience_years', event.target.value)}
-                        className="input-field h-11"
-                      />
-                    ) : (
-                      <p className="text-white font-medium">{profile?.experience_years ?? 0} years</p>
-                    )}
+                    <p className="text-white font-medium">{profile?.experience_years ?? 0} years</p>
                   </div>
                 </div>
-
-                {isProfileEditMode && (
-                  <div className="flex justify-end mb-6">
-                    <button
-                      onClick={() => void handleSaveProfile()}
-                      disabled={isSavingProfile}
-                      className="inline-flex items-center justify-center min-w-40 px-4 py-2.5 rounded-xl border border-green-500/20 bg-green-500/10 text-green-400 text-sm font-bold hover:bg-green-500/15 transition-all disabled:opacity-60"
-                    >
-                      {isSavingProfile ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </div>
-                )}
 
                 <div className="rounded-2xl border border-white/5 bg-white/3 p-4 mb-4">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -426,6 +297,7 @@ export const SeekerDashboard: React.FC = () => {
           loading={loading}
           revokingApplicationId={revokingApplicationId}
           onRevoke={handleRevokeApplication}
+          onViewJob={(jobId) => navigate(`/jobs/${jobId}`)}
           onBrowseJobs={() => navigate('/explore-jobs')}
         />
     </PageContainer>

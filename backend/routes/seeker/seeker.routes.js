@@ -14,7 +14,8 @@ import {
     getSavedJobs,
     removeSavedJob,
     getSeekerStats,
-    getJobSkillMatch
+    getJobSkillMatch,
+    getEmployerDetails
 } from '../../controllers/seekerControllers.js';
 
 const router = express.Router();
@@ -38,5 +39,7 @@ router.put('/skills', updateSkills);
 router.post('/saved-jobs/:job_id', saveJob);
 router.get('/saved-jobs', getSavedJobs);
 router.delete('/saved-jobs/:job_id', removeSavedJob);
+router.get('/jobs/employer/:job_id', getEmployerDetails);
+
 
 export default router;

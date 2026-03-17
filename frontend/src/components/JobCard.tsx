@@ -4,6 +4,7 @@ import { Building2, MapPin, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { JobCardProps } from '../types/job';
 import { COMPANY_LOGOS } from '../assets/logos';
+import { formatJobType } from '../utils/formatters';
 export const JobCard: React.FC<JobCardProps> = ({
   job,
   clickable = true,
@@ -26,7 +27,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
         {metaBadge ?? (
           <div className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-500/10">
-            {job.type}
+            {formatJobType(job.type)}
           </div>
         )}
       </div>

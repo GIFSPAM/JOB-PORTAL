@@ -1,12 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Briefcase, Building2, CalendarClock, MapPin, WalletCards } from 'lucide-react';
-import { applySeekerJob, fetchPublicJobById, fetchSeekerSavedJobs, removeSeekerSavedJob, saveSeekerJob } from '../../api';
+import { ArrowLeft, Briefcase, Building2, CalendarClock, Clock, MapPin, WalletCards } from 'lucide-react';
+import {
+  applySeekerJob,
+  fetchJobSkillMatch,
+  fetchPublicJobById,
+  fetchSeekerApplications,
+  fetchSeekerSavedJobs,
+  removeSeekerSavedJob,
+  saveSeekerJob,
+} from '../../api';
 import type { Job } from '../../types/job';
-import { formatDateShort, formatSalaryRange } from '../../utils/formatters';
+import { formatDateShort, formatJobType, formatSalaryRange } from '../../utils/formatters';
 import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
+import { JobMatchCircle } from '../../components/JobMatchCircle';
 import { useAuth } from '../../context/AuthContext';
+
+type JobMatch = {
+  matchPercentage: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+};
 
 export const JobDetail: React.FC = () => {
   const { user } = useAuth();
@@ -24,6 +39,10 @@ export const JobDetail: React.FC = () => {
   const [checkingSaved, setCheckingSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
+  const [checkingApplied, setCheckingApplied] = useState(false);
+  const [jobMatch, setJobMatch] = useState<JobMatch | null>(null);
+  const [loadingMatch, setLoadingMatch] = useState(false);
 
   useEffect(() => {
     if (!validJobId) {
@@ -32,10 +51,11 @@ export const JobDetail: React.FC = () => {
       return;
     }
 
+    setLoading(true);
     fetchPublicJobById(parsedJobId)
       .then((data) => setJob(data))
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Failed to load job details';
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Failed to load job details';
         toast.error(message);
       })
       .finally(() => setLoading(false));
@@ -44,27 +64,56 @@ export const JobDetail: React.FC = () => {
   useEffect(() => {
     if (!isSeeker || !job?.id) {
       setIsSaved(false);
+      setIsApplied(false);
       return;
     }
 
-    setCheckingSaved(true);
-    fetchSeekerSavedJobs()
-      .then((savedJobs) => {
-        const ids = savedJobs.map((item) => Number(item.job_id));
-        setIsSaved(ids.includes(Number(job.id)));
-      })
+    const checkSavedAndApplied = async () => {
+      setCheckingSaved(true);
+      setCheckingApplied(true);
+      try {
+        const [savedJobs, applications] = await Promise.all([
+          fetchSeekerSavedJobs(),
+          fetchSeekerApplications(),
+        ]);
+        const savedJobIds = savedJobs.map((item) => Number(item.job_id));
+        const appliedJobIds = applications.map((item) => Number(item.job_id));
+        setIsSaved(savedJobIds.includes(Number(job.id)));
+        setIsApplied(appliedJobIds.includes(Number(job.id)));
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to fetch job actions';
+        toast.error(message);
+      } finally {
+        setCheckingSaved(false);
+        setCheckingApplied(false);
+      }
+    };
+
+    void checkSavedAndApplied();
+  }, [isSeeker, job?.id, toast]);
+
+  useEffect(() => {
+    if (!isSeeker || !job?.id) {
+      setJobMatch(null);
+      return;
+    }
+
+    setLoadingMatch(true);
+    fetchJobSkillMatch(job.id)
+      .then((data) => setJobMatch(data))
       .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Failed to fetch saved jobs';
+        const message = error instanceof Error ? error.message : 'Failed to calculate job match';
         toast.error(message);
       })
-      .finally(() => setCheckingSaved(false));
+      .finally(() => setLoadingMatch(false));
   }, [isSeeker, job?.id, toast]);
 
   const handleApply = async () => {
-    if (!isSeeker || !job?.id) return;
+    if (!isSeeker || !job?.id || isApplied) return;
     setApplying(true);
     try {
       await applySeekerJob(job.id);
+      setIsApplied(true);
       toast.success('Application submitted.');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to apply for job';
@@ -95,7 +144,9 @@ export const JobDetail: React.FC = () => {
     }
   };
 
+  const applyButtonDisabled = applying || checkingApplied || isApplied;
   const skillList = useMemo(() => (Array.isArray(job?.skills) ? job.skills : []), [job]);
+  const totalSkills = jobMatch ? jobMatch.matchedSkills.length + jobMatch.missingSkills.length : 0;
 
   return (
     <PageContainer>
@@ -132,21 +183,39 @@ export const JobDetail: React.FC = () => {
                     <Building2 className="w-4 h-4" /> {job.company}
                   </button>
                 </div>
+
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs px-3 py-1 rounded-full border font-bold capitalize ${job.status === 'open' ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-text-muted bg-white/5 border-white/10'}`}>
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full border font-bold capitalize ${
+                      job.status === 'open'
+                        ? 'text-green-400 bg-green-500/10 border-green-500/20'
+                        : 'text-text-muted bg-white/5 border-white/10'
+                    }`}
+                  >
                     {job.status ?? 'open'}
                   </span>
-                  <span className={`text-xs px-3 py-1 rounded-full border font-bold ${job.isVerified ? 'text-brand-accent bg-brand-accent/10 border-brand-accent/20' : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'}`}>
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full border font-bold ${
+                      job.isVerified
+                        ? 'text-brand-accent bg-brand-accent/10 border-brand-accent/20'
+                        : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+                    }`}
+                  >
                     {job.isVerified ? 'Verified' : 'Unverified'}
                   </span>
+
                   {isSeeker && (
                     <>
                       <button
                         onClick={() => void handleApply()}
-                        disabled={applying}
-                        className="inline-flex items-center justify-center px-3 py-2 rounded-lg border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-xs font-bold hover:bg-brand-accent/15 transition-all disabled:opacity-60"
+                        disabled={applyButtonDisabled}
+                        className={`inline-flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
+                          isApplied
+                            ? 'border-green-500/20 bg-green-500/10 text-green-400 hover:bg-green-500/15'
+                            : 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/15'
+                        }`}
                       >
-                        {applying ? 'Applying...' : 'Apply'}
+                        {applying ? 'Applying...' : isApplied ? 'Applied' : 'Apply'}
                       </button>
                       <button
                         onClick={() => void handleToggleSave()}
@@ -165,13 +234,21 @@ export const JobDetail: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={isSeeker ? 'grid grid-cols-1 md:grid-cols-5 gap-4' : 'grid grid-cols-1 md:grid-cols-4 gap-4'}>
+              <div className="glass-card p-5">
+                <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-2">Job Type</p>
+                <p className="text-white font-medium inline-flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-purple-400" /> {formatJobType(job.type)}
+                </p>
+              </div>
+
               <div className="glass-card p-5">
                 <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-2">Location</p>
                 <p className="text-white font-medium inline-flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-yellow-400" /> {job.location || 'Remote'}
                 </p>
               </div>
+
               <div className="glass-card p-5">
                 <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-2">Compensation</p>
                 <p className="text-white font-medium inline-flex items-center gap-2">
@@ -179,12 +256,33 @@ export const JobDetail: React.FC = () => {
                   {formatSalaryRange(job.salaryMin, job.salaryMax)}
                 </p>
               </div>
+
               <div className="glass-card p-5">
                 <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-2">Posted</p>
                 <p className="text-white font-medium inline-flex items-center gap-2">
                   <CalendarClock className="w-4 h-4 text-green-400" /> {formatDateShort(job.postedAt)}
                 </p>
               </div>
+
+              {isSeeker && (
+                <div className="glass-card p-5 flex flex-col items-center justify-center">
+                  {loadingMatch ? (
+                    <div className="space-y-2 text-center">
+                      <div className="w-20 h-20 rounded-full bg-white/5 animate-pulse mx-auto" />
+                      <p className="text-xs text-text-muted">Calculating...</p>
+                    </div>
+                  ) : jobMatch ? (
+                    <>
+                      <JobMatchCircle matchPercentage={jobMatch.matchPercentage} size={92} strokeWidth={7} />
+                      <p className="mt-2 text-xs text-text-muted text-center">
+                        {jobMatch.matchedSkills.length}/{totalSkills} skills matched
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-text-muted text-center">Match unavailable</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="glass-card p-8">
@@ -211,6 +309,53 @@ export const JobDetail: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {isSeeker && jobMatch && (
+              <div className="glass-card p-8">
+                <h2 className="text-lg font-display font-bold text-white mb-4">Skill Match Breakdown</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-3">
+                      Matched Skills ({jobMatch.matchedSkills.length})
+                    </p>
+                    {jobMatch.matchedSkills.length === 0 ? (
+                      <p className="text-sm text-text-muted">No matched skills yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {jobMatch.matchedSkills.map((skill) => (
+                          <span
+                            key={`matched-${skill}`}
+                            className="px-3 py-1.5 rounded-full border border-green-500/20 bg-green-500/10 text-green-400 text-xs font-bold"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-3">
+                      Missing Skills ({jobMatch.missingSkills.length})
+                    </p>
+                    {jobMatch.missingSkills.length === 0 ? (
+                      <p className="text-sm text-green-400">You match all listed skills.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {jobMatch.missingSkills.map((skill) => (
+                          <span
+                            key={`missing-${skill}`}
+                            className="px-3 py-1.5 rounded-full border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-bold"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

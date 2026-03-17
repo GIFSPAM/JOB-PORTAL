@@ -25,6 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     : user?.role === 'employer'
       ? '/employer/profile'
       : '/admin/dashboard';
+  const dashboardRoute = user ? getDashboardRoute(user.role) : '/';
   const seekerNavClass = (path: string) => (
     location.pathname === path
       ? 'text-white'
@@ -94,6 +95,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </>
             ) : user ? (
               <>
+                <Link to={dashboardRoute} className={seekerNavClass(dashboardRoute)}>
+                  My Dashboard
+                </Link>
                 {user.role !== 'admin' && (
                   <Link to="/explore-jobs" className={seekerNavClass('/explore-jobs')}>
                     Explore Jobs
@@ -109,9 +113,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     Saved Jobs
                   </Link>
                 )}
-                <Link to={getDashboardRoute(user.role)} className={seekerNavClass(getDashboardRoute(user.role))}>
-                  My Dashboard
-                </Link>
                 {user.role !== 'admin' && (
                   <Link to={profileRoute} className={seekerNavClass(profileRoute)}>
                     My Profile
@@ -120,6 +121,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </>
             ) : (
               <>
+                <Link to="/" className="hover:text-white transition-colors drop-shadow-sm">Home</Link>
                 <Link to="/explore-jobs" className="hover:text-white transition-colors drop-shadow-sm">Explore Jobs</Link>
                 <Link to="/register" className="hover:text-white transition-colors drop-shadow-sm">Post a Job</Link>
                 <Link to="/login"    className="hover:text-white transition-colors drop-shadow-sm">Admin</Link>

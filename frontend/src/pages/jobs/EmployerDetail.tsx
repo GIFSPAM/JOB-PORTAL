@@ -101,13 +101,13 @@ export const EmployerDetail: React.FC = () => {
         <h2 className="text-lg font-display font-bold text-white mb-6">Employer Details</h2>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((item) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((item) => (
               <div key={item} className="h-32 rounded-2xl bg-white/5 animate-pulse" />
             ))}
           </div>
         ) : employerDetails ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
             <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
               <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-2">Industry</p>
               <p className="text-white font-medium inline-flex items-center gap-2">
@@ -128,25 +128,26 @@ export const EmployerDetail: React.FC = () => {
             </div>
             <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
               <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-2">Contact</p>
-              <div className="space-y-2">
-                <p className="text-white font-medium inline-flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-brand-accent" /> {employerDetails.company_phone || 'Not available'}
+              <p className="text-white font-medium inline-flex items-center gap-2">
+                <Phone className="w-4 h-4 text-brand-accent" /> {employerDetails.company_phone || 'Not available'}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+              <p className="text-xs uppercase tracking-widest text-text-muted font-bold mb-2">Website</p>
+              {companyWebsite ? (
+                <a
+                  href={companyWebsite}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand-accent hover:text-blue-300 transition-colors text-sm inline-flex items-center gap-2"
+                >
+                  <Globe className="w-4 h-4" /> Visit Website
+                </a>
+              ) : (
+                <p className="text-text-muted text-sm inline-flex items-center gap-2">
+                  <Globe className="w-4 h-4" /> No website listed
                 </p>
-                {companyWebsite ? (
-                  <a
-                    href={companyWebsite}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-brand-accent hover:text-blue-300 transition-colors text-sm inline-flex items-center gap-2"
-                  >
-                    <Globe className="w-4 h-4" /> Visit Website
-                  </a>
-                ) : (
-                  <p className="text-text-muted text-sm inline-flex items-center gap-2">
-                    <Globe className="w-4 h-4" /> No website listed
-                  </p>
-                )}
-              </div>
+              )}
             </div>
           </div>
         ) : (

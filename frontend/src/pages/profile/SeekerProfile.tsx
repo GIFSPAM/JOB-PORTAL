@@ -7,51 +7,57 @@ import {
   Phone,
   FileBadge2,
   Sparkles,
-  Briefcase,
-  BookmarkCheck,
   ArrowLeft,
   Download,
   Upload,
+  X,
+  Plus,
 } from 'lucide-react';
 import {
+  fetchSeekerOverview,
   fetchSeekerProfile,
-  fetchSeekerStats,
-  fetchSeekerApplications,
-  fetchSeekerSavedJobs,
   downloadSeekerResume,
+  removeSeekerSavedJob,
   updateSeekerResume,
+  updateSeekerProfile,
+  updateSeekerSkills,
 } from '../../api';
 import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
-
-const STATUS_STYLES: Record<string, string> = {
-  applied: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  shortlisted: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  hired: 'bg-green-500/10 text-green-400 border-green-500/20',
-  rejected: 'bg-red-500/10 text-red-400 border-red-500/20',
-};
+import { RecentApplicationsCard } from '../../components/profile/RecentApplicationsCard';
+import { SavedJobsSummaryCard } from '../../components/profile/SavedJobsSummaryCard';
+import type { SavedJob, SeekerApplication, SeekerProfile, SeekerSkill, SeekerStats } from '../../types/seeker';
 
 export const SeekerProfile: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [profile, setProfile] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
-  const [applications, setApplications] = useState<any[]>([]);
-  const [savedJobs, setSavedJobs] = useState<any[]>([]);
+  const [profile, setProfile] = useState<SeekerProfile | null>(null);
+  const [stats, setStats] = useState<SeekerStats | null>(null);
+  const [applications, setApplications] = useState<SeekerApplication[]>([]);
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeDownloading, setResumeDownloading] = useState(false);
+  const [removingSavedJobId, setRemovingSavedJobId] = useState<number | null>(null);
+  const [isProfileEditMode, setIsProfileEditMode] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    full_name: '',
+    education: '',
+    phone_number: '',
+    experience_years: '0',
+  });
+  const [isSkillsEditMode, setIsSkillsEditMode] = useState(false);
+  const [isSavingSkills, setIsSavingSkills] = useState(false);
+  const [skillsForm, setSkillsForm] = useState<SeekerSkill[]>([]);
+  const [newSkillName, setNewSkillName] = useState('');
+  const [newSkillProficiency, setNewSkillProficiency] = useState('intermediate');
   const resumeFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetchSeekerProfile(),
-      fetchSeekerStats(),
-      fetchSeekerApplications(),
-      fetchSeekerSavedJobs(),
-    ])
-      .then(([profilePayload, statsPayload, applicationsPayload, savedJobsPayload]) => {
+    fetchSeekerOverview()
+      .then(({ profile: profilePayload, stats: statsPayload, applications: applicationsPayload, savedJobs: savedJobsPayload }) => {
         setProfile(profilePayload);
         setStats(statsPayload);
         setApplications(applicationsPayload);
@@ -110,6 +116,125 @@ export const SeekerProfile: React.FC = () => {
     }
   };
 
+  const openProfileEditor = () => {
+    setProfileForm({
+      full_name: profile?.full_name ?? '',
+      education: profile?.education ?? '',
+      phone_number: profile?.phone_number ?? '',
+      experience_years: String(profile?.experience_years ?? 0),
+    });
+    setIsProfileEditMode(true);
+  };
+
+  const closeProfileEditor = () => {
+    setIsProfileEditMode(false);
+  };
+
+  const handleProfileFormChange = (field: 'full_name' | 'education' | 'phone_number' | 'experience_years', value: string) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    const parsedExperience = Number(profileForm.experience_years);
+    const safeExperience = Number.isFinite(parsedExperience) && parsedExperience >= 0
+      ? Math.floor(parsedExperience)
+      : 0;
+
+    setIsSavingProfile(true);
+    try {
+      await updateSeekerProfile({
+        full_name: profileForm.full_name.trim(),
+        education: profileForm.education.trim(),
+        phone_number: profileForm.phone_number.trim(),
+        experience_years: safeExperience,
+      });
+
+      const refreshedProfile = await fetchSeekerProfile();
+      setProfile(refreshedProfile);
+      setIsProfileEditMode(false);
+      toast.success('Profile updated successfully.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile';
+      toast.error(message);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const openSkillsEditor = () => {
+    setSkillsForm(profile?.skills?.length ? [...profile.skills] : []);
+    setNewSkillName('');
+    setNewSkillProficiency('intermediate');
+    setIsSkillsEditMode(true);
+  };
+
+  const closeSkillsEditor = () => {
+    setIsSkillsEditMode(false);
+    setSkillsForm([]);
+    setNewSkillName('');
+  };
+
+  const addSkill = () => {
+    if (!newSkillName.trim()) {
+      toast.error('Skill name cannot be empty');
+      return;
+    }
+    if (skillsForm.some(s => s.name.toLowerCase() === newSkillName.trim().toLowerCase())) {
+      toast.error('Skill already added');
+      return;
+    }
+    setSkillsForm([...skillsForm, { name: newSkillName.trim(), proficiency: newSkillProficiency }]);
+    setNewSkillName('');
+    setNewSkillProficiency('intermediate');
+  };
+
+  const removeSkill = (index: number) => {
+    setSkillsForm((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSkillProficiency = (index: number, proficiency: string) => {
+    setSkillsForm((prev) => prev.map((skill, i) => (i === index ? { ...skill, proficiency } : skill)));
+  };
+
+  const handleSaveSkills = async () => {
+    const allowedProficiency = new Set(['beginner', 'intermediate', 'advanced']);
+    const normalizedSkills = skillsForm.map((skill) => ({
+      ...skill,
+      proficiency: allowedProficiency.has(String(skill.proficiency).toLowerCase())
+        ? String(skill.proficiency).toLowerCase()
+        : 'intermediate',
+    }));
+
+    setIsSavingSkills(true);
+    try {
+      await updateSeekerSkills(normalizedSkills);
+      const refreshedProfile = await fetchSeekerProfile();
+      setProfile(refreshedProfile);
+      setIsSkillsEditMode(false);
+      toast.success('Skills updated successfully.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update skills';
+      toast.error(message);
+    } finally {
+      setIsSavingSkills(false);
+    }
+  };
+
+  const handleRemoveSavedJob = async (jobId: number) => {
+    if (!Number.isInteger(jobId) || jobId <= 0) return;
+    setRemovingSavedJobId(jobId);
+    try {
+      await removeSeekerSavedJob(jobId);
+      setSavedJobs((prev) => prev.filter((job) => Number(job.job_id) !== Number(jobId)));
+      toast.success('Removed from saved jobs.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to remove saved job';
+      toast.error(message);
+    } finally {
+      setRemovingSavedJobId(null);
+    }
+  };
+
   return (
     <PageContainer>
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -142,9 +267,20 @@ export const SeekerProfile: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
           <div className="glass-card p-8">
-            <h2 className="text-lg font-display font-bold text-white mb-6 flex items-center gap-2">
-              <User className="w-5 h-5 text-brand-accent" /> Profile Details
-            </h2>
+            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+              <h2 className="text-lg font-display font-bold text-white flex items-center gap-2">
+                <User className="w-5 h-5 text-brand-accent" /> Profile Details
+              </h2>
+              {!loading && (
+                <button
+                  onClick={isProfileEditMode ? closeProfileEditor : openProfileEditor}
+                  disabled={isSavingProfile}
+                  className="inline-flex items-center justify-center min-w-40 px-4 py-2.5 rounded-xl border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-sm font-bold hover:bg-brand-accent/15 transition-all disabled:opacity-60"
+                >
+                  {isProfileEditMode ? 'Close Editor' : 'Update Profile'}
+                </button>
+              )}
+            </div>
 
             {loading ? (
               <div className="space-y-3">
@@ -155,25 +291,74 @@ export const SeekerProfile: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Full Name</p>
-                    <p className="text-white font-medium">{profile?.full_name ?? 'Not added'}</p>
+                    {isProfileEditMode ? (
+                      <input
+                        value={profileForm.full_name}
+                        onChange={(event) => handleProfileFormChange('full_name', event.target.value)}
+                        placeholder="Your full name"
+                        className="input-field h-11"
+                      />
+                    ) : (
+                      <p className="text-white font-medium">{profile?.full_name ?? 'Not added'}</p>
+                    )}
                   </div>
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2 flex items-center gap-2">
                       <GraduationCap className="w-4 h-4" /> Education
                     </p>
-                    <p className="text-white font-medium">{profile?.education ?? 'Not added'}</p>
+                    {isProfileEditMode ? (
+                      <input
+                        value={profileForm.education}
+                        onChange={(event) => handleProfileFormChange('education', event.target.value)}
+                        placeholder="Your education"
+                        className="input-field h-11"
+                      />
+                    ) : (
+                      <p className="text-white font-medium">{profile?.education ?? 'Not added'}</p>
+                    )}
                   </div>
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2 flex items-center gap-2">
                       <Phone className="w-4 h-4" /> Phone
                     </p>
-                    <p className="text-white font-medium">{profile?.phone_number ?? 'Not added'}</p>
+                    {isProfileEditMode ? (
+                      <input
+                        value={profileForm.phone_number}
+                        onChange={(event) => handleProfileFormChange('phone_number', event.target.value)}
+                        placeholder="Your phone number"
+                        className="input-field h-11"
+                      />
+                    ) : (
+                      <p className="text-white font-medium">{profile?.phone_number ?? 'Not added'}</p>
+                    )}
                   </div>
                   <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                     <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Experience</p>
-                    <p className="text-white font-medium">{profile?.experience_years ?? 0} years</p>
+                    {isProfileEditMode ? (
+                      <input
+                        type="number"
+                        min={0}
+                        value={profileForm.experience_years}
+                        onChange={(event) => handleProfileFormChange('experience_years', event.target.value)}
+                        className="input-field h-11"
+                      />
+                    ) : (
+                      <p className="text-white font-medium">{profile?.experience_years ?? 0} years</p>
+                    )}
                   </div>
                 </div>
+
+                {isProfileEditMode && (
+                  <div className="flex justify-end mb-6">
+                    <button
+                      onClick={() => void handleSaveProfile()}
+                      disabled={isSavingProfile}
+                      className="inline-flex items-center justify-center min-w-40 px-4 py-2.5 rounded-xl border border-green-500/20 bg-green-500/10 text-green-400 text-sm font-bold hover:bg-green-500/15 transition-all disabled:opacity-60"
+                    >
+                      {isSavingProfile ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                )}
 
                 <div className="rounded-2xl border border-white/5 bg-white/3 p-4 mb-6">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -212,74 +397,137 @@ export const SeekerProfile: React.FC = () => {
                 </div>
 
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" /> Skills
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {profile?.skills?.length ? profile.skills.map((skill: any) => (
-                      <span
-                        key={`${skill.name}-${skill.proficiency}`}
-                        className="px-3 py-1.5 rounded-full border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-xs font-bold capitalize"
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <p className="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" /> Skills
+                    </p>
+                    {!isSkillsEditMode && (
+                      <button
+                        onClick={openSkillsEditor}
+                        disabled={isSavingSkills}
+                        className="text-xs font-bold text-brand-accent hover:text-brand-accent/80 transition-colors disabled:opacity-60"
                       >
-                        {skill.name} · {skill.proficiency}
-                      </span>
-                    )) : <span className="text-sm text-text-muted">No skills added yet.</span>}
+                        Edit Skills
+                      </button>
+                    )}
                   </div>
+                  
+                  {isSkillsEditMode ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          <input
+                            type="text"
+                            value={newSkillName}
+                            onChange={(e) => setNewSkillName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addSkill();
+                              }
+                            }}
+                            placeholder="Add skill name"
+                            className="input-field h-10 flex-1 min-w-45 text-sm"
+                          />
+                          <select
+                            value={newSkillProficiency}
+                            onChange={(e) => setNewSkillProficiency(e.target.value)}
+                            className="input-field h-10 min-w-37.5 text-sm"
+                          >
+                            <option value="beginner">Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                          </select>
+                          <button
+                            onClick={addSkill}
+                            className="inline-flex items-center justify-center px-3 h-10 rounded-lg border border-brand-accent/20 bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/15 transition-all"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {skillsForm.length > 0 ? (
+                          skillsForm.map((skill, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-brand-accent/20 bg-brand-accent/10 px-3 py-2"
+                            >
+                              <span className="text-xs font-bold text-brand-accent capitalize">{skill.name}</span>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={skill.proficiency}
+                                  onChange={(e) => updateSkillProficiency(index, e.target.value)}
+                                  className="input-field h-8 min-w-35 text-xs"
+                                >
+                                  <option value="beginner">Beginner</option>
+                                  <option value="intermediate">Intermediate</option>
+                                  <option value="advanced">Advanced</option>
+                                </select>
+                                <button
+                                  onClick={() => removeSkill(index)}
+                                  className="inline-flex items-center justify-center rounded-md p-1 text-text-muted hover:text-red-400 transition-colors"
+                                  aria-label={`Remove ${skill.name}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-sm text-text-muted">No skills added yet.</span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={() => void handleSaveSkills()}
+                          disabled={isSavingSkills}
+                          className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-green-500/20 bg-green-500/10 text-green-400 text-xs font-bold hover:bg-green-500/15 transition-all disabled:opacity-60"
+                        >
+                          {isSavingSkills ? 'Saving...' : 'Save Skills'}
+                        </button>
+                        <button
+                          onClick={closeSkillsEditor}
+                          disabled={isSavingSkills}
+                          className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-white/10 text-text-muted text-xs font-bold hover:text-white transition-all disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {profile?.skills?.length ? profile.skills.map((skill) => (
+                        <span
+                          key={`${skill.name}-${skill.proficiency}`}
+                          className="px-3 py-1.5 rounded-full border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-xs font-bold capitalize"
+                        >
+                          {skill.name} · {skill.proficiency}
+                        </span>
+                      )) : <span className="text-sm text-text-muted">No skills added yet.</span>}
+                    </div>
+                  )}
                 </div>
               </>
             )}
           </div>
 
           <div className="space-y-6">
-            <div className="glass-card p-8">
-              <h2 className="text-lg font-display font-bold text-white mb-6 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-brand-accent" /> Recent Applications
-              </h2>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((index) => <div key={index} className="h-12 bg-white/5 rounded-xl animate-pulse" />)}
-                </div>
-              ) : applications.length === 0 ? (
-                <p className="text-sm text-text-muted">No applications yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {applications.slice(0, 5).map((app, index) => {
-                    const cls = STATUS_STYLES[app.status?.toLowerCase()] ?? 'bg-white/5 text-text-muted border-white/10';
-                    return (
-                      <div key={app.application_id ?? index} className="rounded-2xl border border-white/5 bg-white/3 p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-white font-medium truncate">{app.title ?? 'Untitled job'}</p>
-                          <span className={`px-2.5 py-1 rounded-full border text-xs font-bold capitalize ${cls}`}>{app.status ?? 'applied'}</span>
-                        </div>
-                        <p className="text-xs text-text-muted mt-1">{app.company_name ?? 'Unknown company'}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <RecentApplicationsCard
+              loading={loading}
+              applications={applications}
+              onViewJob={(jobId) => navigate(`/jobs/${jobId}`)}
+            />
 
-            <div className="glass-card p-8">
-              <h2 className="text-lg font-display font-bold text-white mb-6 flex items-center gap-2">
-                <BookmarkCheck className="w-5 h-5 text-brand-yellow" /> Saved Jobs
-              </h2>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((index) => <div key={index} className="h-12 bg-white/5 rounded-xl animate-pulse" />)}
-                </div>
-              ) : savedJobs.length === 0 ? (
-                <p className="text-sm text-text-muted">No saved jobs yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {savedJobs.slice(0, 5).map((job, index) => (
-                    <div key={job.job_id ?? index} className="rounded-2xl border border-white/5 bg-white/3 p-4">
-                      <p className="text-white font-medium">{job.title}</p>
-                      <p className="text-xs text-text-muted mt-1">{job.company_name} · {job.location ?? 'Remote'}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SavedJobsSummaryCard
+              loading={loading}
+              savedJobs={savedJobs}
+              removingSavedJobId={removingSavedJobId}
+              onViewJob={(jobId) => navigate(`/jobs/${jobId}`)}
+              onRemoveSavedJob={(jobId) => void handleRemoveSavedJob(jobId)}
+            />
           </div>
         </div>
     </PageContainer>

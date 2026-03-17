@@ -1,20 +1,16 @@
 import React from 'react';
 import { Briefcase, ChevronRight, FileText, Undo2 } from 'lucide-react';
+import { formatApplicationStatus } from '../../utils/formatters';
+import type { SeekerApplication } from '../../types/seeker';
 
-export interface SeekerApplicationItem {
-  application_id: number;
-  job_id?: number;
-  title?: string;
-  company_name?: string;
-  status?: string;
-  applied_at?: string;
-}
+export type SeekerApplicationItem = SeekerApplication;
 
 interface SeekerApplicationsSectionProps {
   applications: SeekerApplicationItem[];
   loading: boolean;
   revokingApplicationId: number | null;
   onRevoke: (applicationId: number) => void | Promise<void>;
+  onViewJob?: (jobId: number) => void | Promise<void>;
   onBrowseJobs?: () => void;
   title?: string;
   emptyMessage?: string;
@@ -32,6 +28,7 @@ export const SeekerApplicationsSection: React.FC<SeekerApplicationsSectionProps>
   loading,
   revokingApplicationId,
   onRevoke,
+  onViewJob,
   onBrowseJobs,
   title = 'My Applications',
   emptyMessage = 'No applications yet.',
@@ -75,6 +72,8 @@ export const SeekerApplicationsSection: React.FC<SeekerApplicationsSectionProps>
                 const status = String(application.status ?? 'applied').toLowerCase();
                 const statusClass = STATUS_STYLES[status] ?? 'bg-white/5 text-text-muted border-white/10';
                 const applicationId = Number(application.application_id);
+                const jobId = Number(application.job_id);
+                const hasValidJobId = Number.isInteger(jobId) && jobId > 0;
                 const isRevoking = revokingApplicationId === applicationId;
 
                 return (
@@ -85,19 +84,35 @@ export const SeekerApplicationsSection: React.FC<SeekerApplicationsSectionProps>
                       {application.applied_at ? new Date(application.applied_at).toLocaleDateString() : '–'}
                     </td>
                     <td className="py-4">
-                      <span className={`px-3 py-1 rounded-full border text-xs font-bold capitalize ${statusClass}`}>
-                        {application.status ?? 'applied'}
+                      <span className={`px-3 py-1 rounded-full border text-xs font-bold ${statusClass}`}>
+                        {formatApplicationStatus(application.status)}
                       </span>
                     </td>
                     <td className="py-4">
-                      <button
-                        onClick={() => void onRevoke(applicationId)}
-                        disabled={isRevoking || Number.isNaN(applicationId)}
-                        className="inline-flex items-center justify-center min-w-28 px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-bold hover:bg-red-500/15 transition-all disabled:opacity-60"
-                      >
-                        <Undo2 className="w-3.5 h-3.5 mr-1.5" />
-                        {isRevoking ? 'Revoking...' : 'Revoke'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {onViewJob ? (
+                          <button
+                            onClick={() => {
+                              if (hasValidJobId) {
+                                void onViewJob(jobId);
+                              }
+                            }}
+                            disabled={!hasValidJobId}
+                            className="inline-flex items-center justify-center min-w-28 px-3 py-2 rounded-lg border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-xs font-bold hover:bg-brand-accent/15 transition-all disabled:opacity-60"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5 mr-1.5" />
+                            View Job
+                          </button>
+                        ) : null}
+                        <button
+                          onClick={() => void onRevoke(applicationId)}
+                          disabled={isRevoking || Number.isNaN(applicationId)}
+                          className="inline-flex items-center justify-center min-w-28 px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-bold hover:bg-red-500/15 transition-all disabled:opacity-60"
+                        >
+                          <Undo2 className="w-3.5 h-3.5 mr-1.5" />
+                          {isRevoking ? 'Revoking...' : 'Revoke'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

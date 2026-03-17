@@ -1,7 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Filter, Search, Briefcase } from 'lucide-react';
 import { JobCard } from '../components/JobCard';
-import { applySeekerJob, fetchPublicJobs, fetchSeekerSavedJobs, removeSeekerSavedJob, saveSeekerJob } from '../api';
+import {
+  applySeekerJob,
+  fetchPublicJobs,
+  fetchSeekerApplications,
+  fetchSeekerSavedJobs,
+  removeSeekerSavedJob,
+  saveSeekerJob,
+} from '../api';
 import type { Job } from '../types/job';
 import { PageContainer } from '../components/layout/PageContainer';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +24,7 @@ export const ExploreJobs: React.FC = () => {
   const [jobTypeFilter, setJobTypeFilter] = useState('all');
   const [skillFilter, setSkillFilter] = useState('all');
   const [savedJobIds, setSavedJobIds] = useState<number[]>([]);
+  const [appliedJobIds, setAppliedJobIds] = useState<number[]>([]);
   const [savingJobId, setSavingJobId] = useState<number | null>(null);
   const [applyingJobId, setApplyingJobId] = useState<number | null>(null);
   const isSeeker = user?.role === 'jobseeker';
@@ -31,15 +39,17 @@ export const ExploreJobs: React.FC = () => {
   useEffect(() => {
     if (!isSeeker) {
       setSavedJobIds([]);
+      setAppliedJobIds([]);
       return;
     }
 
-    fetchSeekerSavedJobs()
-      .then((payload) => {
-        setSavedJobIds(payload.map((item) => Number(item.job_id)).filter((id) => Number.isInteger(id)));
+    Promise.all([fetchSeekerSavedJobs(), fetchSeekerApplications()])
+      .then(([savedPayload, appliedPayload]) => {
+        setSavedJobIds(savedPayload.map((item) => Number(item.job_id)).filter((id) => Number.isInteger(id)));
+        setAppliedJobIds(appliedPayload.map((item) => Number(item.job_id)).filter((id) => Number.isInteger(id)));
       })
       .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Failed to fetch saved jobs';
+        const message = error instanceof Error ? error.message : 'Failed to fetch job actions';
         toast.error(message);
       });
   }, [isSeeker, toast]);
@@ -81,10 +91,11 @@ export const ExploreJobs: React.FC = () => {
   }, [jobs, jobTypeFilter, searchQuery, skillFilter]);
 
   const handleApply = async (jobId: number) => {
-    if (!isSeeker) return;
+    if (!isSeeker || appliedJobIds.includes(jobId)) return;
     setApplyingJobId(jobId);
     try {
       await applySeekerJob(jobId);
+      setAppliedJobIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
       toast.success('Application submitted.');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to apply for job';
@@ -193,34 +204,41 @@ export const ExploreJobs: React.FC = () => {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                footerActions={isSeeker ? (
-                  <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-                    <button
-                      onClick={() => void handleApply(job.id)}
-                      disabled={applyingJobId === job.id}
-                      className="inline-flex items-center justify-center px-3 py-2 rounded-lg border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-xs font-bold hover:bg-brand-accent/15 transition-all disabled:opacity-60"
-                    >
-                      {applyingJobId === job.id ? 'Applying...' : 'Apply'}
-                    </button>
-                    <button
-                      onClick={() => void handleToggleSave(job.id)}
-                      disabled={savingJobId === job.id}
-                      className={`inline-flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
-                        savedJobIds.includes(job.id)
-                          ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/15'
-                          : 'border-white/10 bg-white/5 text-text-main hover:bg-white/10'
-                      }`}
-                    >
-                      {savingJobId === job.id ? 'Saving...' : savedJobIds.includes(job.id) ? 'Saved' : 'Save'}
-                    </button>
-                  </div>
-                ) : undefined}
-              />
-            ))}
+            {filteredJobs.map((job) => {
+              const isApplied = appliedJobIds.includes(job.id);
+              return (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  footerActions={isSeeker ? (
+                    <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        onClick={() => void handleApply(job.id)}
+                        disabled={applyingJobId === job.id || isApplied}
+                        className={`inline-flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
+                          isApplied
+                            ? 'border-green-500/20 bg-green-500/10 text-green-400 hover:bg-green-500/15'
+                            : 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/15'
+                        }`}
+                      >
+                        {applyingJobId === job.id ? 'Applying...' : isApplied ? 'Applied' : 'Apply'}
+                      </button>
+                      <button
+                        onClick={() => void handleToggleSave(job.id)}
+                        disabled={savingJobId === job.id}
+                        className={`inline-flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
+                          savedJobIds.includes(job.id)
+                            ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/15'
+                            : 'border-white/10 bg-white/5 text-text-main hover:bg-white/10'
+                        }`}
+                      >
+                        {savingJobId === job.id ? 'Saving...' : savedJobIds.includes(job.id) ? 'Saved' : 'Save'}
+                      </button>
+                    </div>
+                  ) : undefined}
+                />
+              );
+            })}
           </div>
         )}
     </PageContainer>

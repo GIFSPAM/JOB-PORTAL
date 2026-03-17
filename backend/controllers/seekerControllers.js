@@ -341,3 +341,18 @@ export const getJobSkillMatch = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+export const getEmployerDetails = async (req, res) => {
+    const seeker_id = req.user.user_id;
+    const { job_id } = req.params;
+    try{
+        const row = await  pool.query(`select e.employer_id, e.company_name, e.company_phone, e.industry, e.company_size, e.company_location, e.company_website from jobs j join employers e on j.employer_id = e.employer_id where j.job_id = ?`, [job_id]);
+        if(!row.length){
+            return res.status(404).json({ success: false, message: 'Job not found.' });
+        }else{
+            return res.status(200).json({ success: true, data: row[0] });
+        }
+    }catch(error){
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};

@@ -8,6 +8,19 @@ export const formatSalaryRange = (
   return 'Not specified';
 };
 
+export const formatJobType = (jobType?: string | null): string => {
+  if (!jobType) return 'Not specified';
+  return jobType
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('-');
+};
+
+export const formatApplicationStatus = (status?: string | null): string => {
+  if (!status) return 'Applied';
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+};
+
 export const formatDateShort = (dateValue?: string | null): string => {
   if (!dateValue) return 'Unknown';
   const parsed = new Date(dateValue);
