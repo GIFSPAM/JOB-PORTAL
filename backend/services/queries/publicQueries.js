@@ -9,13 +9,15 @@ export const PUBLIC_JOBS_BASE_QUERY = `
         j.posted_at,
         j.employer_id,
         e.company_name,
+        j.status,
+        j.is_verified,
         (SELECT GROUP_CONCAT(s.skill_name)
          FROM JobSkills js
          JOIN Skills s ON js.skill_id = s.skill_id
          WHERE js.job_id = j.job_id) AS skills_list
     FROM Jobs j
     JOIN Employers e ON e.employer_id = j.employer_id
-    WHERE j.status = 'open' AND j.is_verified = TRUE
+    WHERE j.is_verified = TRUE
 `;
 
 export const PUBLIC_JOBS_SKILLS_FILTER = `

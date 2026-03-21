@@ -141,6 +141,7 @@ frontend/
 
     shared/
       components/
+        Logo.tsx
         DataTable.tsx
         StatCard.tsx
         EmptyState.tsx
@@ -161,6 +162,13 @@ frontend/
         date.ts
         currency.ts
         formatters.ts
+
+    assets/
+      logos.tsx
+      logos/
+        google.png
+        meta.png
+        building.png
 
     pages/
       NotFoundPage.tsx

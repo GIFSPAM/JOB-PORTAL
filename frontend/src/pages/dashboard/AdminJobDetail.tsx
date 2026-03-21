@@ -113,6 +113,8 @@ export const AdminJobDetail: React.FC = () => {
       salary: formatSalaryRange(job.salary_min, job.salary_max),
       type: job.job_type || 'Unknown',
       logo: job.logo,
+      status: job.status,
+      isVerified: Boolean(job.is_verified),
     };
   }, [job]);
 

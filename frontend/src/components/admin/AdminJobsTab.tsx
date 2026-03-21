@@ -94,6 +94,8 @@ export const AdminJobsTab: React.FC<AdminJobsTabProps> = ({
               salary: formatSalaryRange(job.salary_min, job.salary_max),
               type: job.job_type || 'Unknown',
               logo: job.logo,
+              status: job.status,
+              isVerified: Boolean(job.is_verified),
             };
 
             return (

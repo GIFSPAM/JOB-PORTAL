@@ -41,6 +41,8 @@ export const Auth = () => {
   // Already logged in → go straight to their dashboard
   if (user) return <Navigate to={getDashboardRoute(user.role)} replace />;
 
+  const containerClass = isLogin ? 'max-w-xl w-full' : 'w-full';
+
   const renderAuthForm = () => {
     if (isLogin) {
       return <LoginAuth onSuccess={handleSuccess} onToggleMode={toggleAuthMode} />;
@@ -56,8 +58,8 @@ export const Auth = () => {
   };
 
   return (
-    <section className="pt-44 pb-24 px-6 min-h-screen flex items-center justify-center">
-      <div className="max-w-xl w-full">
+    <section className={`px-6 min-h-screen ${isLogin ? 'pt-44 pb-24 flex items-center justify-center' : 'pt-32 pb-16'}`}>
+      <div className={containerClass}>
         <AnimatePresence mode="wait">
           {step === 1 ? (
             <RoleSelector

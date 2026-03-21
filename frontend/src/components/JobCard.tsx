@@ -14,6 +14,10 @@ export const JobCard: React.FC<JobCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const handleCardClick = onClick ?? (() => navigate(`/jobs/${job.id}`));
+  const normalizedStatus = String(job.status ?? '').toLowerCase();
+  const isOpen = normalizedStatus === 'open';
+  const hasVerification = typeof job.isVerified === 'boolean';
+  const isVerified = job.isVerified === true;
 
   return (
     <motion.div
@@ -25,11 +29,39 @@ export const JobCard: React.FC<JobCardProps> = ({
         <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 shadow-sm flex items-center justify-center overflow-hidden">
           {<img src={ job.logo || COMPANY_LOGOS.co_opert} className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
         </div>
-        {metaBadge ?? (
-          <div className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-500/10">
-            {formatJobType(job.type)}
+        <div className="flex flex-col items-end gap-2">
+          {metaBadge ?? (
+            <div className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-500/10">
+              {formatJobType(job.type)}
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <span
+              className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${
+                isOpen
+                  ? 'text-green-300 bg-green-500/15 border-green-500/30'
+                  : 'text-text-muted bg-white/5 border-white/10'
+              }`}
+            >
+              {isOpen ? 'Open' : 'Closed'}
+            </span>
+            <span
+              className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${
+                hasVerification
+                  ? isVerified
+                    ? 'text-brand-accent bg-brand-accent/10 border-brand-accent/25'
+                    : 'text-yellow-300 bg-yellow-500/10 border-yellow-500/25'
+                  : 'text-text-muted bg-white/5 border-white/10'
+              }`}
+            >
+              {hasVerification
+                ? isVerified
+                  ? 'Verified'
+                  : 'Unverified'
+                : 'Unknown'}
+            </span>
           </div>
-        )}
+        </div>
       </div>
 
       <div>

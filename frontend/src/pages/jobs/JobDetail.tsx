@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Briefcase, Building2, CalendarClock, Clock, MapPin, WalletCards } from 'lucide-react';
+import { ArrowLeft, Bookmark, BookmarkCheck, Briefcase, Building2, CalendarClock, CheckCircle2, Clock, MapPin, WalletCards } from 'lucide-react';
 import {
   applySeekerJob,
   fetchJobSkillMatch,
@@ -110,6 +110,10 @@ export const JobDetail: React.FC = () => {
 
   const handleApply = async () => {
     if (!isSeeker || !job?.id || isApplied) return;
+    if (String(job.status ?? '').toLowerCase() === 'closed') {
+      toast.error('Job is closed');
+      return;
+    }
     setApplying(true);
     try {
       await applySeekerJob(job.id);
@@ -145,6 +149,7 @@ export const JobDetail: React.FC = () => {
   };
 
   const applyButtonDisabled = applying || checkingApplied || isApplied;
+  const isJobClosed = String(job?.status ?? '').toLowerCase() === 'closed';
   const skillList = useMemo(() => (Array.isArray(job?.skills) ? job.skills : []), [job]);
   const totalSkills = jobMatch ? jobMatch.matchedSkills.length + jobMatch.missingSkills.length : 0;
 
@@ -171,7 +176,7 @@ export const JobDetail: React.FC = () => {
         ) : (
           <div className="space-y-6">
             <div className="glass-card p-8">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start justify-between gap-4 flex-wrap lg:flex-nowrap">
                 <div>
                   <h1 className="text-3xl font-display font-bold text-white inline-flex items-center gap-2">
                     <Briefcase className="w-7 h-7 text-brand-accent" /> {job.title}
@@ -182,53 +187,78 @@ export const JobDetail: React.FC = () => {
                   >
                     <Building2 className="w-4 h-4" /> {job.company}
                   </button>
+
+                  <div className="mt-3 flex items-center gap-2 flex-wrap w-full">
+                    <span
+                      className={`text-xs px-3 py-1 rounded-full border font-bold capitalize ${
+                        job.status === 'open'
+                          ? 'text-green-400 bg-green-500/10 border-green-500/20'
+                          : 'text-text-muted bg-white/5 border-white/10'
+                      }`}
+                    >
+                      {job.status ?? 'open'}
+                    </span>
+                    <span
+                      className={`text-xs px-3 py-1 rounded-full border font-bold ${
+                        job.isVerified
+                          ? 'text-brand-accent bg-brand-accent/10 border-brand-accent/20'
+                          : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+                      }`}
+                    >
+                      {job.isVerified ? 'Verified' : 'Unverified'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`text-xs px-3 py-1 rounded-full border font-bold capitalize ${
-                      job.status === 'open'
-                        ? 'text-green-400 bg-green-500/10 border-green-500/20'
-                        : 'text-text-muted bg-white/5 border-white/10'
-                    }`}
-                  >
-                    {job.status ?? 'open'}
-                  </span>
-                  <span
-                    className={`text-xs px-3 py-1 rounded-full border font-bold ${
-                      job.isVerified
-                        ? 'text-brand-accent bg-brand-accent/10 border-brand-accent/20'
-                        : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
-                    }`}
-                  >
-                    {job.isVerified ? 'Verified' : 'Unverified'}
-                  </span>
-
+                <div className="w-full lg:w-auto lg:min-w-[320px] flex flex-col items-start lg:items-end gap-3">
                   {isSeeker && (
-                    <>
+                    <div className="flex items-center justify-end gap-2 w-full">
                       <button
                         onClick={() => void handleApply()}
                         disabled={applyButtonDisabled}
-                        className={`inline-flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
-                          isApplied
-                            ? 'border-green-500/20 bg-green-500/10 text-green-400 hover:bg-green-500/15'
-                            : 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/15'
+                        aria-disabled={isJobClosed}
+                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border text-xs font-extrabold tracking-wide transition-all disabled:opacity-60 ${
+                          isJobClosed
+                            ? 'border-white/10 bg-white/5 text-text-muted cursor-not-allowed hover:bg-white/5'
+                            : isApplied
+                            ? 'border-green-400/60 bg-green-500/20 text-green-200 shadow-lg shadow-green-500/25 hover:bg-green-500/30'
+                            : 'border-brand-accent/60 bg-brand-accent text-white shadow-lg shadow-blue-500/35 hover:bg-blue-500'
                         }`}
                       >
-                        {applying ? 'Applying...' : isApplied ? 'Applied' : 'Apply'}
+                        {isJobClosed ? (
+                          'Apply (Closed)'
+                        ) : applying ? (
+                          'Applying...'
+                        ) : isApplied ? (
+                          <>
+                            Applied <CheckCircle2 className="w-3.5 h-3.5" />
+                          </>
+                        ) : (
+                          'Apply'
+                        )}
                       </button>
                       <button
                         onClick={() => void handleToggleSave()}
                         disabled={saving || checkingSaved}
-                        className={`inline-flex items-center justify-center px-3 py-2 rounded-lg border text-xs font-bold transition-all disabled:opacity-60 ${
+                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border text-xs font-extrabold tracking-wide transition-all disabled:opacity-60 ${
                           isSaved
-                            ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/15'
-                            : 'border-white/10 bg-white/5 text-text-main hover:bg-white/10'
+                            ? 'border-yellow-400/70 bg-yellow-500/25 text-yellow-100 shadow-lg shadow-yellow-500/30 hover:bg-yellow-500/35'
+                            : 'border-white/25 bg-black/40 text-white hover:border-yellow-400/50 hover:text-yellow-200'
                         }`}
                       >
-                        {saving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}
+                        {saving ? (
+                          'Saving...'
+                        ) : isSaved ? (
+                          <>
+                            Saved <BookmarkCheck className="w-3.5 h-3.5" />
+                          </>
+                        ) : (
+                          <>
+                            Save <Bookmark className="w-3.5 h-3.5" />
+                          </>
+                        )}
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
