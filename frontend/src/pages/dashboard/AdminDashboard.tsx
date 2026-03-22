@@ -5,10 +5,8 @@ import {
   Briefcase,
   ShieldCheck,
   Activity,
-  LogOut,
   AlertCircle,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import {
   fetchAdminStats,
   fetchAdminJobs,
@@ -28,7 +26,6 @@ import type { AdminJob, AdminStats, AdminUser } from '../../types/admin';
 import { PageContainer } from '../../components/layout/PageContainer';
 
 export const AdminDashboard: React.FC = () => {
-  const { logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,11 +94,6 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     void loadAdminData();
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const handleTabChange = (tab: string) => setSearchParams({ tab });
   const handleOpenUserDetail = (userId: number) => navigate(`/admin/users/${userId}`);
@@ -215,12 +207,6 @@ export const AdminDashboard: React.FC = () => {
             </h1>
             <p className="text-text-muted mt-1">Manage jobs, users, and platform data.</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-sm font-bold text-text-muted hover:text-white hover:border-white/20 transition-all"
-          >
-            <LogOut className="w-4 h-4" /> Log Out
-          </button>
         </div>
 
         <div className="tile-grid">
