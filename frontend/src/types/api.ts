@@ -1,5 +1,17 @@
 import type { Role } from './auth';
 
+/** Untyped JSON payloads from the backend where we do not model the full schema. */
+export type JsonRecord = Record<string, unknown>;
+
+/** Typical `/auth/login` and `/auth/register` response body from this API. */
+export interface AuthApiEnvelope {
+  data?: {
+    token?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export interface RegisterPayload {
   role: Role;
   email: string;

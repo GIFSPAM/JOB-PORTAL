@@ -26,13 +26,13 @@ import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { RecentApplicationsCard } from '../../components/profile/RecentApplicationsCard';
 import { SavedJobsSummaryCard } from '../../components/profile/SavedJobsSummaryCard';
-import type { SavedJob, SeekerApplication, SeekerProfile, SeekerSkill, SeekerStats } from '../../types/seeker';
+import type { SavedJob, SeekerApplication, SeekerProfile as SeekerProfileData, SeekerSkill, SeekerStats } from '../../types/seeker';
 
 export const SeekerProfile: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [profile, setProfile] = useState<SeekerProfile | null>(null);
+  const [profile, setProfile] = useState<SeekerProfileData | null>(null);
   const [stats, setStats] = useState<SeekerStats | null>(null);
   const [applications, setApplications] = useState<SeekerApplication[]>([]);
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);

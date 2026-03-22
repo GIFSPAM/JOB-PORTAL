@@ -7,6 +7,7 @@ import { AuthField } from './AuthField';
 import { useToast } from '../Toast';
 import { useAuth, getDashboardRoute, decodeRole } from '../../context/AuthContext';
 import type { LoginAuthProps } from '../../types/auth';
+import { toUserMessage } from '../../utils/errors';
 
 export const LoginAuth: React.FC<LoginAuthProps> = ({ onSuccess, onToggleMode }) => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ export const LoginAuth: React.FC<LoginAuthProps> = ({ onSuccess, onToggleMode })
       }
       onSuccess ? onSuccess() : navigate('/');
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Login failed');
+      toast.error(toUserMessage(err, 'Login failed'));
     } finally {
       setLoading(false);
     }
