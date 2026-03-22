@@ -6,8 +6,14 @@ import {
   ExploreJobs,
   JobDetail,
   EmployerDetail,
+  EmployerMyJobs,
+  EmployerMyJobDetail,
+  EmployerPostJob,
   Auth,
   Applications,
+  EmployerApplications,
+  EmployerJobApplicants,
+  EmployerApplicantDetail,
   SavedJobs,
   SeekerDashboard,
   EmployerDashboard,
@@ -78,6 +84,54 @@ export const AppRoutes: React.FC = () => (
       element={
         <ProtectedRoute roles={['employer']}>
           <EmployerDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/employer/applications"
+      element={
+        <ProtectedRoute roles={['employer']}>
+          <EmployerApplications />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/employer/applications/:applicationId"
+      element={
+        <ProtectedRoute roles={['employer']}>
+          <EmployerApplicantDetail />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/employer/applications/job/:jobId"
+      element={
+        <ProtectedRoute roles={['employer']}>
+          <EmployerJobApplicants />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/employer/my-jobs"
+      element={
+        <ProtectedRoute roles={['employer']}>
+          <EmployerMyJobs />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/employer/my-jobs/new"
+      element={
+        <ProtectedRoute roles={['employer']}>
+          <EmployerPostJob />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/employer/my-jobs/:jobId"
+      element={
+        <ProtectedRoute roles={['employer']}>
+          <EmployerMyJobDetail />
         </ProtectedRoute>
       }
     />

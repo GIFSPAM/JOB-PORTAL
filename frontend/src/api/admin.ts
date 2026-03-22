@@ -1,6 +1,11 @@
 import { api, extractError } from './client';
 import type { AdminJob, AdminStats, AdminUser } from '../types/admin';
 
+type AdminEmployer = {
+  user_id: number;
+  company_website?: string;
+};
+
 export const fetchAdminStats = async (): Promise<AdminStats> => {
   try {
     const { data: p } = await api.get('/admin/stats');
@@ -37,6 +42,15 @@ export const fetchAdminUsers = async (): Promise<AdminUser[]> => {
     return Array.isArray(p?.data) ? (p.data as AdminUser[]) : [];
   } catch (err) {
     throw new Error(extractError(err, 'Failed to fetch users'));
+  }
+};
+
+export const fetchAdminEmployers = async (): Promise<AdminEmployer[]> => {
+  try {
+    const { data: p } = await api.get('/admin/employers');
+    return Array.isArray(p?.data) ? (p.data as AdminEmployer[]) : [];
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to fetch employers'));
   }
 };
 

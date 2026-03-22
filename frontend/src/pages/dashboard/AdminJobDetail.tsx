@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import {
   fetchAdminJobById,
+  fetchAdminEmployers,
   verifyAdminJob,
   unverifyAdminJob,
   deleteAdminJob,
@@ -46,7 +47,18 @@ export const AdminJobDetail: React.FC = () => {
 
     try {
       const payload = await fetchAdminJobById(parsedJobId);
-      setJob(payload);
+      if (payload.company_website || !payload.employer_id) {
+        setJob(payload);
+        return;
+      }
+
+      try {
+        const employers = await fetchAdminEmployers();
+        const owner = employers.find((item) => Number(item.user_id) === Number(payload.employer_id));
+        setJob({ ...payload, company_website: owner?.company_website ?? payload.company_website });
+      } catch {
+        setJob(payload);
+      }
     } catch (err: unknown) {
       setJob(null);
       const message = err instanceof Error ? err.message : 'Failed to load job';

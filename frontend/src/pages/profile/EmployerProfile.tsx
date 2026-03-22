@@ -11,8 +11,9 @@ import {
   TrendingUp,
   BadgeCheck,
   ArrowLeft,
+  Pencil,
 } from 'lucide-react';
-import { fetchEmployerProfile, fetchEmployerJobs, fetchEmployerStats } from '../../api';
+import { fetchEmployerProfile, fetchEmployerJobs, fetchEmployerStats, updateEmployerProfile } from '../../api';
 import { useToast } from '../../components/Toast';
 
 const JOB_STATUS: Record<string, string> = {
@@ -28,6 +29,15 @@ export const EmployerProfile: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+
+  const [companyName, setCompanyName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [companyLocation, setCompanyLocation] = useState('');
+  const [companySize, setCompanySize] = useState('');
+  const [companyPhone, setCompanyPhone] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState('');
 
   useEffect(() => {
     Promise.all([fetchEmployerProfile(), fetchEmployerJobs(), fetchEmployerStats()])
@@ -39,6 +49,49 @@ export const EmployerProfile: React.FC = () => {
       .catch((err) => toast.error(err.message))
       .finally(() => setLoading(false));
   }, [toast]);
+
+  useEffect(() => {
+    if (!profile) return;
+    setCompanyName(String(profile.company_name ?? ''));
+    setIndustry(String(profile.industry ?? ''));
+    setCompanyLocation(String(profile.company_location ?? ''));
+    setCompanySize(String(profile.company_size ?? ''));
+    setCompanyPhone(String(profile.company_phone ?? ''));
+    setCompanyWebsite(String(profile.company_website ?? ''));
+  }, [profile]);
+
+  const resetProfileDraft = () => {
+    setCompanyName(String(profile?.company_name ?? ''));
+    setIndustry(String(profile?.industry ?? ''));
+    setCompanyLocation(String(profile?.company_location ?? ''));
+    setCompanySize(String(profile?.company_size ?? ''));
+    setCompanyPhone(String(profile?.company_phone ?? ''));
+    setCompanyWebsite(String(profile?.company_website ?? ''));
+  };
+
+  const handleSaveProfile = async () => {
+    const payload = {
+      company_name: companyName.trim(),
+      industry: industry.trim(),
+      company_location: companyLocation.trim(),
+      company_size: companySize.trim(),
+      company_phone: companyPhone.trim(),
+      company_website: companyWebsite.trim(),
+    };
+
+    setSaving(true);
+    try {
+      await updateEmployerProfile(payload);
+      setProfile((prev: any) => ({ ...prev, ...payload }));
+      toast.success('Profile updated successfully.');
+      setEditMode(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile';
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const totalApplicants = useMemo(
     () => Number(stats?.total_applications ?? 0),
@@ -89,9 +142,45 @@ export const EmployerProfile: React.FC = () => {
         </div>
 
         <div className="glass-card p-8">
-          <h2 className="text-lg font-display font-bold text-white mb-6 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-brand-yellow" /> Company Details
-          </h2>
+          <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-lg font-display font-bold text-white flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-brand-yellow" /> Company Details
+            </h2>
+            {!loading && (
+              <div className="flex items-center gap-2">
+                {editMode ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetProfileDraft();
+                        setEditMode(false);
+                      }}
+                      className="px-3 py-2 rounded-xl border border-white/10 text-xs font-bold text-text-muted hover:text-white hover:border-white/20 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveProfile()}
+                      disabled={saving}
+                      className="btn-yellow px-3 py-2 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {saving ? 'Saving...' : 'Save Profile'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setEditMode(true)}
+                    className="px-3 py-2 rounded-xl border border-white/10 text-xs font-bold text-white hover:border-brand-accent/40 hover:bg-white/5 transition-all inline-flex items-center gap-2"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit Profile
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((index) => <div key={index} className="h-12 bg-white/5 rounded-xl animate-pulse" />)}
@@ -100,33 +189,87 @@ export const EmployerProfile: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Company Name</p>
-                <p className="text-white font-medium">{profile?.company_name ?? 'Not added'}</p>
+                {editMode ? (
+                  <input
+                    value={companyName}
+                    onChange={(event) => setCompanyName(event.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/60"
+                    placeholder="Company name"
+                  />
+                ) : (
+                  <p className="text-white font-medium">{profile?.company_name ?? 'Not added'}</p>
+                )}
               </div>
               <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Industry</p>
-                <p className="text-white font-medium">{profile?.industry ?? 'Not added'}</p>
+                {editMode ? (
+                  <input
+                    value={industry}
+                    onChange={(event) => setIndustry(event.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/60"
+                    placeholder="Industry"
+                  />
+                ) : (
+                  <p className="text-white font-medium">{profile?.industry ?? 'Not added'}</p>
+                )}
               </div>
               <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2 flex items-center gap-2">
                   <MapPin className="w-4 h-4" /> Location
                 </p>
-                <p className="text-white font-medium">{profile?.company_location ?? 'Not added'}</p>
+                {editMode ? (
+                  <input
+                    value={companyLocation}
+                    onChange={(event) => setCompanyLocation(event.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/60"
+                    placeholder="Company location"
+                  />
+                ) : (
+                  <p className="text-white font-medium">{profile?.company_location ?? 'Not added'}</p>
+                )}
               </div>
               <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Team Size</p>
-                <p className="text-white font-medium">{profile?.company_size ?? 'Not added'}</p>
+                {editMode ? (
+                  <input
+                    value={companySize}
+                    onChange={(event) => setCompanySize(event.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/60"
+                    placeholder="Company size"
+                  />
+                ) : (
+                  <p className="text-white font-medium">{profile?.company_size ?? 'Not added'}</p>
+                )}
               </div>
               <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2 flex items-center gap-2">
                   <Phone className="w-4 h-4" /> Phone
                 </p>
-                <p className="text-white font-medium">{profile?.company_phone ?? 'Not added'}</p>
+                {editMode ? (
+                  <input
+                    value={companyPhone}
+                    onChange={(event) => setCompanyPhone(event.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/60"
+                    placeholder="Company phone"
+                  />
+                ) : (
+                  <p className="text-white font-medium">{profile?.company_phone ?? 'Not added'}</p>
+                )}
               </div>
               <div className="rounded-2xl border border-white/5 bg-white/3 p-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2 flex items-center gap-2">
                   <Globe className="w-4 h-4" /> Website
                 </p>
-                <p className="text-white font-medium break-all">{profile?.company_website ?? 'Not added'}</p>
+                {editMode ? (
+                  <input
+                    value={companyWebsite}
+                    onChange={(event) => setCompanyWebsite(event.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent/60"
+                    placeholder="https://example.com"
+                  />
+                ) : (
+                  <p className="text-white font-medium break-all">{profile?.company_website ?? 'Not added'}</p>
+                )}
               </div>
             </div>
           )}

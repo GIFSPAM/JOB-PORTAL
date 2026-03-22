@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Briefcase, Users, TrendingUp, LogOut, Building2, PlusCircle, Globe, MapPin, Phone, BadgeCheck } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { Briefcase, Users, TrendingUp, Building2, Globe, MapPin, Phone, BadgeCheck } from 'lucide-react';
 import { fetchEmployerStats, fetchEmployerJobs, fetchEmployerProfile } from '../../api';
 import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
@@ -13,8 +11,6 @@ const JOB_STATUS: Record<string, string> = {
 };
 
 export const EmployerDashboard: React.FC = () => {
-  const { logout } = useAuth();
-  const navigate   = useNavigate();
   const toast      = useToast();
 
   const [stats,   setStats]   = useState<any>(null);
@@ -28,8 +24,6 @@ export const EmployerDashboard: React.FC = () => {
       .catch(err => toast.error(err.message))
       .finally(() => setLoading(false));
   }, [toast]);
-
-  const handleLogout = () => { logout(); navigate('/login'); };
 
   const statCards = [
     { label: 'Jobs Posted',      value: stats?.total_jobs       ?? jobs.length,                              Icon: Briefcase,  color: 'text-yellow-400 bg-yellow-500/10' },
@@ -54,14 +48,6 @@ export const EmployerDashboard: React.FC = () => {
               </span>
               {profile?.industry && <span className="text-sm text-text-muted">{profile.industry}</span>}
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-sm font-bold text-text-muted hover:text-white hover:border-white/20 transition-all"
-            >
-              <LogOut className="w-4 h-4" /> Log Out
-            </button>
           </div>
         </div>
 
@@ -164,64 +150,6 @@ export const EmployerDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Jobs table */}
-        <div className="glass-card p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-display font-bold text-white flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-brand-yellow" /> My Job Listings
-            </h2>
-            <button className="btn-yellow flex items-center gap-2 py-2 px-4 text-sm">
-              <PlusCircle className="w-4 h-4" /> Post New Job
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="h-14 bg-white/5 rounded-xl animate-pulse" />)}
-            </div>
-          ) : jobs.length === 0 ? (
-            <div className="text-center py-12">
-              <Briefcase className="w-10 h-10 text-text-muted mx-auto mb-3" />
-              <p className="text-text-muted mb-4">No jobs posted yet.</p>
-              <button className="btn-yellow text-sm flex items-center gap-2 mx-auto">
-                <PlusCircle className="w-4 h-4" /> Post Your First Job
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs font-bold text-text-muted uppercase tracking-widest border-b border-white/5">
-                    <th className="text-left pb-4">Job Title</th>
-                    <th className="text-left pb-4">Location</th>
-                    <th className="text-left pb-4">Type</th>
-                    <th className="text-left pb-4">Applicants</th>
-                    <th className="text-left pb-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {jobs.map((job, i) => {
-                    const cls = JOB_STATUS[job.status?.toLowerCase()] ?? JOB_STATUS.closed;
-                    return (
-                      <tr key={job.job_id ?? i} className="hover:bg-white/3 transition-colors">
-                        <td className="py-4 font-medium text-white">{job.title}</td>
-                        <td className="py-4 text-text-muted">{job.location ?? '–'}</td>
-                        <td className="py-4 text-text-muted capitalize">{job.job_type ?? '–'}</td>
-                        <td className="py-4 text-text-muted">{job.applicant_count ?? 0}</td>
-                        <td className="py-4">
-                          <span className={`px-3 py-1 rounded-full border text-xs font-bold capitalize ${cls}`}>
-                            {job.status ?? 'closed'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
     </PageContainer>
   );

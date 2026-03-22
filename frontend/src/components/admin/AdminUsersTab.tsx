@@ -54,7 +54,7 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
               <input
                 value={userSearchQuery}
                 onChange={(event) => onUserSearchChange(event.target.value)}
-                placeholder="ID, email, company, or name"
+                placeholder="ID, email, company, website, or name"
                 className="input-field input-field-with-icon w-72"
               />
             </div>
@@ -105,6 +105,9 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                       </span>
                     </div>
                     <p className="text-sm text-text-muted">{user.email}</p>
+                    {user.role === 'employer' && user.company_website && (
+                      <p className="text-xs text-brand-accent break-all">{user.company_website}</p>
+                    )}
                     <p className="text-xs text-text-muted">Created {formatDateShort(user.created_at)}</p>
                   </div>
 

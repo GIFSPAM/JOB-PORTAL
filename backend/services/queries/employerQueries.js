@@ -10,7 +10,42 @@ export const SELECT_SKILL_ID_BY_NAME = 'SELECT skill_id FROM Skills WHERE skill_
 export const INSERT_JOB_SKILL = 'INSERT INTO JobSkills (job_id, skill_id) VALUES (?, ?)';
 
 export const SELECT_EMPLOYER_JOBS = `
-    SELECT * FROM Jobs WHERE employer_id = ? ORDER BY posted_at DESC
+    SELECT
+        j.job_id,
+        j.employer_id,
+        j.title,
+        j.description,
+        j.location,
+        j.job_type,
+        j.salary_min,
+        j.salary_max,
+        j.status,
+        j.is_verified,
+        j.verified_by,
+        j.verified_at,
+        j.posted_at,
+        COALESCE(GROUP_CONCAT(DISTINCT s.skill_name ORDER BY s.skill_name SEPARATOR ','), '') AS skills_list,
+        COUNT(DISTINCT a.application_id) AS applicant_count
+    FROM Jobs j
+    LEFT JOIN JobSkills js ON j.job_id = js.job_id
+    LEFT JOIN Skills s ON js.skill_id = s.skill_id
+    LEFT JOIN Applications a ON a.job_id = j.job_id
+    WHERE j.employer_id = ?
+    GROUP BY
+        j.job_id,
+        j.employer_id,
+        j.title,
+        j.description,
+        j.location,
+        j.job_type,
+        j.salary_min,
+        j.salary_max,
+        j.status,
+        j.is_verified,
+        j.verified_by,
+        j.verified_at,
+        j.posted_at
+    ORDER BY j.posted_at DESC
 `;
 
 export const UPDATE_JOB = `

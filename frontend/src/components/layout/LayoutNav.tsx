@@ -90,9 +90,19 @@ export const LayoutNav: React.FC = () => {
               <Link to={dashboardRoute} className={seekerNavClass(dashboardRoute)}>
                 My Dashboard
               </Link>
-              {user.role !== 'admin' && (
+              {user.role === 'jobseeker' && (
                 <Link to="/explore-jobs" className={seekerNavClass('/explore-jobs')}>
                   Explore Jobs
+                </Link>
+              )}
+              {user.role === 'employer' && (
+                <Link to="/employer/applications" className={seekerNavClass('/employer/applications')}>
+                  Applications
+                </Link>
+              )}
+              {user.role === 'employer' && (
+                <Link to="/employer/my-jobs" className={seekerNavClass('/employer/my-jobs')}>
+                  My Jobs
                 </Link>
               )}
               {user.role === 'jobseeker' && (

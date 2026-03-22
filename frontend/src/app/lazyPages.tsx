@@ -4,9 +4,25 @@ export const Home = lazy(() => import('../pages/Home').then((m) => ({ default: m
 export const ExploreJobs = lazy(() => import('../pages/ExploreJobs').then((m) => ({ default: m.ExploreJobs })));
 export const JobDetail = lazy(() => import('../pages/jobs/JobDetail').then((m) => ({ default: m.JobDetail })));
 export const EmployerDetail = lazy(() => import('../pages/jobs/EmployerDetail').then((m) => ({ default: m.EmployerDetail })));
+export const EmployerMyJobs = lazy(() => import('../pages/jobs/EmployerMyJobs').then((m) => ({ default: m.EmployerMyJobs })));
+export const EmployerMyJobDetail = lazy(() =>
+  import('../pages/jobs/EmployerMyJobDetail').then((m) => ({ default: m.EmployerMyJobDetail })),
+);
+export const EmployerPostJob = lazy(() =>
+  import('../pages/jobs/EmployerPostJob').then((m) => ({ default: m.EmployerPostJob }))
+);
 export const Auth = lazy(() => import('../pages/Auth').then((m) => ({ default: m.Auth })));
 export const Applications = lazy(() => import('../pages/Applications').then((m) => ({ default: m.Applications })));
 export const SavedJobs = lazy(() => import('../pages/SavedJobs').then((m) => ({ default: m.SavedJobs })));
+export const EmployerApplications = lazy(() =>
+  import('../pages/EmployerApplications').then((m) => ({ default: m.EmployerApplications })),
+);
+export const EmployerApplicantDetail = lazy(() =>
+  import('../pages/EmployerApplicantDetail').then((m) => ({ default: m.EmployerApplicantDetail })),
+);
+export const EmployerJobApplicants = lazy(() =>
+  import('../pages/EmployerJobApplicants').then((m) => ({ default: m.EmployerJobApplicants })),
+);
 
 export const SeekerDashboard = lazy(() =>
   import('../pages/dashboard/SeekerDashboard').then((m) => ({ default: m.SeekerDashboard })),

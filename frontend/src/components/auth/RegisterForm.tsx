@@ -20,6 +20,7 @@ import type { RegisterFormProps, Role } from '../../types/auth';
 import { registerAPI } from '../../api';
 import { AuthField } from './AuthField';
 import { useToast } from '../Toast';
+import { decodeRole, getDashboardRoute, useAuth } from '../../context/AuthContext';
 
 const ROLE_CONFIG = {
   seeker:   { bg: 'bg-blue-500/10',   text: 'text-blue-400',   Icon: UserIcon,  label: 'Seeker'   },
@@ -45,6 +46,7 @@ const FormSection: React.FC<FormSectionProps> = ({ title, description, children 
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSuccess, onToggleMode }) => {
   const navigate = useNavigate();
+  const { setAuth } = useAuth();
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -79,8 +81,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
     }
     setLoading(true);
     try {
+      let result;
       if (role === 'seeker') {
-        await registerAPI({
+        result = await registerAPI({
           role, email, password,
           full_name: fullName,
           education,
@@ -88,7 +91,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
           phone_number: phoneNumber,
         });
       } else if (role === 'employer') {
-        await registerAPI({
+        result = await registerAPI({
           role, email, password,
           company_name: companyName,
           industry,
@@ -98,8 +101,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
           company_phone: companyPhone || undefined,
         });
       } else {
-        await registerAPI({ role, email, password, secretKey });
+        result = await registerAPI({ role, email, password, secretKey });
       }
+
+      const token = result?.data?.token;
+      if (token) {
+        setAuth(token);
+        const backendRole = decodeRole(token);
+        navigate(backendRole ? getDashboardRoute(backendRole) : '/');
+        return;
+      }
+
       onSuccess ? onSuccess() : navigate('/');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Registration failed');

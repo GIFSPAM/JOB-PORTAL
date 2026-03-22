@@ -20,6 +20,25 @@ import {
     SELECT_RESUME_DOWNLOAD_CONTEXT
 } from '../services/queries/employerQueries.js';
 
+const normalizeJobType = (value) => {
+    const raw = String(value ?? '').trim().toLowerCase();
+    if (!raw) return null;
+
+    const direct = {
+        full_time: 'full_time',
+        part_time: 'part_time',
+        internship: 'internship',
+        contract: 'contract',
+    };
+    if (direct[raw]) return direct[raw];
+
+    const hyphen = {
+        'full-time': 'full_time',
+        'part-time': 'part_time',
+    };
+    return hyphen[raw] ?? null;
+};
+
 async function upsertJobSkills(conn, jobId, skills) {
     for (const skillName of skills) {
         const normalized = skillName.trim().toLowerCase();
@@ -33,7 +52,12 @@ async function upsertJobSkills(conn, jobId, skills) {
 export const createJob = async (req, res) => {
     const employer_id = req.user.user_id;
     const { title, description, location, job_type, salary_min, salary_max, skills } = req.body;
+    const normalizedJobType = normalizeJobType(job_type);
     let conn;
+
+    if (!normalizedJobType) {
+        return res.status(400).json({ success: false, error: 'Invalid job type.' });
+    }
 
     try {
         conn = await pool.getConnection();
@@ -41,7 +65,7 @@ export const createJob = async (req, res) => {
 
         // 1. FIX: Remove the [brackets] from the variable name
         const rawResponse = await conn.query(INSERT_JOB, [
-            employer_id, title, description, location, job_type, salary_min, salary_max
+            employer_id, title, description, location, normalizedJobType, salary_min, salary_max
         ]);
 
         const jobId = Number(rawResponse.insertId);
@@ -64,7 +88,20 @@ export const createJob = async (req, res) => {
 export const getEmployerJobs = async (req, res) => {
     try {
         const rows = await pool.query(SELECT_EMPLOYER_JOBS, [req.user.user_id]);
-        return res.status(200).json({ success: true, count: rows.length, data: rows });
+
+        const data = rows.map(({ skills_list, applicant_count, job_id, employer_id, salary_min, salary_max, ...rest }) => ({
+            ...rest,
+            job_id: Number(job_id),
+            employer_id: Number(employer_id),
+            salary_min: salary_min !== null ? Number(salary_min) : null,
+            salary_max: salary_max !== null ? Number(salary_max) : null,
+            applicant_count: Number(applicant_count ?? 0),
+            skills: skills_list
+                ? String(skills_list).split(',').map((skill) => skill.trim()).filter(Boolean)
+                : []
+        }));
+
+        return res.status(200).json({ success: true, count: data.length, data });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
@@ -75,17 +112,22 @@ export const updateJob = async (req, res) => {
     const employer_id = req.user.user_id;
     const { job_id } = req.params;
     const { title, description, location, job_type, salary_min, salary_max, skills } = req.body;
+    const normalizedJobType = normalizeJobType(job_type);
     let conn;
+
+    if (!normalizedJobType) {
+        return res.status(400).json({ success: false, error: 'Invalid job type.' });
+    }
     try {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
         const result = await conn.query(UPDATE_JOB, [
-            title, description, location, job_type, salary_min, salary_max, job_id, employer_id
+            title, description, location, normalizedJobType, salary_min, salary_max, job_id, employer_id
         ]);
         if (result.affectedRows === 0) throw new Error("Unauthorized or not found");
 
-        if (skills?.length) {
+        if (Array.isArray(skills)) {
             await conn.query(DELETE_JOB_SKILLS, [job_id]);
             await upsertJobSkills(conn, job_id, skills);
         }

@@ -34,7 +34,8 @@ export const SELECT_ALL_USERS = `
         u.is_active,
         u.created_at,
         js.full_name,
-        e.company_name
+        e.company_name,
+        e.company_website
     FROM Users u
     LEFT JOIN JobSeekers js ON js.seeker_id = u.user_id
     LEFT JOIN Employers e ON e.employer_id = u.user_id
