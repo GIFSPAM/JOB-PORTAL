@@ -1,0 +1,4009 @@
+﻿PROJECT EXPORT: JOB-PORTAL (BACKEND ONLY)
+Generated: 2026-03-21 16:37:52
+Root: c:\Projects--VScode\JOB-PORTAL
+
+FRONTEND_CONTEXT_PROMPT:
+Build the frontend in React + TypeScript + Vite with role-based navigation, reusable modules, and a premium hero section.
+
+Frontend UI Design Brief:
+Use a modern, clean, dark-first visual system with strong contrast, glass-style surfaces, clear typography hierarchy, and smooth motion accents. Keep layouts spacious, consistent, and responsive, with a professional product feel across all pages.
+
+Prompt Objective:
+Create a high-impact hero section where our logo is the fixed central anchor, while logos of other companies revolve around our logo in smooth orbital motion.
+
+LOGO_INTEGRATION_STRUCTURE:
+- Main website logo component: frontend/src/components/Logo.tsx
+- Company/logo mapping module: frontend/src/assets/logos.tsx
+- Local logo image assets folder: frontend/src/assets/logos/
+
+Mandatory Hero Orbital Requirements:
+- Our logo must be present and visually dominant at the center of the orbital composition.
+- Other company logos must revolve around our center logo on one or multiple orbit rings.
+- Motion must be continuous, smooth, and subtle (no jitter, no abrupt speed changes).
+- Orbit spacing must be balanced and readable; no logo overlaps at any breakpoint.
+- Orbital layout must be fully responsive across desktop, tablet, and mobile.
+
+Visual and Interaction Requirements:
+- Keep the orbital section clean, modern, and brand-first.
+- Ensure surrounding logos support our brand narrative and do not overpower our logo.
+- Preserve existing circular/orbit design language in the system.
+- Keep JobMatchCircle style consistency for circular visual behavior and animation quality.
+
+Engineering and Architecture Requirements (Strict):
+- Follow clean code practices with maximum componentization.
+- Enforce strong modularity and single-responsibility components.
+- Maintain strict hierarchy across pages, components, context, types, and utilities.
+- Keep files small and focused; avoid monolithic components.
+- Reuse shared UI primitives and utility functions whenever possible.
+
+UPLOAD_FOLDER_NOTE:
+Folder exists: backend/uploads
+Upload files detected: 32
+Per request, upload file contents are intentionally excluded from this export.
+
+API_ROUTE_STRUCTURE:
+Server mounts:
+- /api/auth -> routes/auth/auth.routes.js
+- /api/admin -> routes/admin/admin.routes.js
+- /api/seeker -> routes/seeker/seeker.routes.js
+- /api/employer -> routes/employer/employer.routes.js
+- /api/public -> routes/public/public.routes.js
+
+Auth routes:
+- POST /api/auth/register
+- POST /api/auth/login
+- GET /api/auth/me
+- GET /api/auth/resume-download/:application_id
+
+Public routes:
+- GET /api/public/jobs
+- GET /api/public/jobs/:job_id
+- GET /api/public/skills
+- GET /api/public/landing-jobs
+
+Seeker routes (auth + seeker role):
+- GET /api/seeker/stats
+- GET /api/seeker/job-match/:job_id
+- POST /api/seeker/apply/:job_id
+- GET /api/seeker/my-applications
+- DELETE /api/seeker/revoke/:application_id
+- GET /api/seeker/profile
+- PUT /api/seeker/profile
+- GET /api/seeker/profile/resume/download
+- PUT /api/seeker/profile/resume
+- PUT /api/seeker/skills
+- POST /api/seeker/saved-jobs/:job_id
+- GET /api/seeker/saved-jobs
+- DELETE /api/seeker/saved-jobs/:job_id
+- GET /api/seeker/jobs/employer/:job_id
+
+Employer routes (auth + employer role):
+- GET /api/employer/stats
+- POST /api/employer/post
+- GET /api/employer/my-jobs
+- PUT /api/employer/update/:job_id
+- PATCH /api/employer/status/:job_id
+- DELETE /api/employer/delete-jobs/:job_id
+- GET /api/employer/applicants/:job_id
+- PATCH /api/employer/application-status/:application_id
+- GET /api/employer/profile
+- PUT /api/employer/profile
+
+Admin routes (auth + admin role):
+- GET /api/admin/stats
+- GET /api/admin/employers
+- GET /api/admin/seekers
+- GET /api/admin/users
+- GET /api/admin/users/:user_id
+- PATCH /api/admin/users/:user_id/status
+- DELETE /api/admin/users/:user_id
+- DELETE /api/admin/jobs/:job_id
+- PATCH /api/admin/verify-job/:job_id
+- PATCH /api/admin/unverify-job/:job_id
+- GET /api/admin/all-jobs
+
+========================================================================================================================
+FILE: backend/.env
+------------------------------------------------------------------------------------------------------------------------
+PORT=5000
+DB_HOST="localhost"
+DB_USER="root"
+DB_PASS="SHAHAL@123"
+DB_NAME="job_portal"
+JWT_SECRET="SECRET_KEY"
+ADMIN_SECRET="BLACKBERRY"
+
+========================================================================================================================
+FILE: backend/.gitignore
+------------------------------------------------------------------------------------------------------------------------
+uploads/
+.env
+node_modules/
+postman/
+
+========================================================================================================================
+FILE: backend/config/db.js
+------------------------------------------------------------------------------------------------------------------------
+import * as mariadb from 'mariadb';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const pool = mariadb.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    connectionLimit: 5
+});
+
+export default pool;
+
+========================================================================================================================
+FILE: backend/controllers/adminControllers.js
+------------------------------------------------------------------------------------------------------------------------
+import pool from '../config/db.js';
+import {
+    VERIFY_JOB,
+    ADMIN_ALL_JOBS_BASE_QUERY,
+    ADMIN_ALL_JOBS_SKILLS_FILTER,
+    SELECT_ALL_USERS,
+    SELECT_USER_BY_ID,
+    UPDATE_USER_ACTIVE_STATUS,
+    DELETE_USER,
+    DELETE_JOB,
+    UNVERIFY_JOB,
+    ADMIN_STATS_QUERY,
+    SELECT_ALL_EMPLOYERS,
+    SELECT_ALL_SEEKERS
+} from '../services/queries/adminQueries.js';
+
+/**
+ * @desc    Verify a posted job so it appears on the public feed
+ * @route   PATCH /api/admin/verify-job/:job_id
+ * @access  Private (Admin only)
+ */
+export const verifyJob = async (req, res) => {
+    const { job_id } = req.params;
+    // We get the admin's ID from the JWT token payload (handled by authMiddleware)
+    const admin_id = req.user.user_id; 
+
+    try {
+        // Remember, no [result] destructuring for MariaDB updates!
+        const result = await pool.query(VERIFY_JOB, [admin_id, job_id]);
+        
+        // It's good practice to check if the job actually existed
+        if (result.affectedRows === 0) {
+             return res.status(404).json({ success: false, message: "Job not found." });
+        }
+
+       return res.status(200).json({ success: true, message: "Job verified successfully. âœ…" });
+    } catch (error) {
+       return res.status(500).json({ success: false, error: "Failed to verify job.", details: error.message });
+    }
+};
+
+/**
+ * @desc    Get all jobs for admin audit
+ * @route   GET /api/admin/all-jobs
+ * @access  Private (Admin only)
+ */
+export const getAllJobs = async (req, res) => {
+    try {
+        const { search, location, job_type, sort_by, status, is_verified, skills } = req.query;
+
+        let sql = ADMIN_ALL_JOBS_BASE_QUERY;
+
+        const params = [];
+
+        if (search) {
+            sql += ` AND j.title LIKE ?`;
+            params.push(`%${search}%`);
+        }
+        if (location) {
+            sql += ` AND j.location = ?`;
+            params.push(location);
+        }
+        if (job_type) {
+            sql += ` AND j.job_type = ?`;
+            params.push(job_type);
+        }
+        if (status) {
+            sql += ` AND j.status = ?`;
+            params.push(status);
+        }
+        if (is_verified !== undefined) {
+            sql += ` AND j.is_verified = ?`;
+            params.push(is_verified === 'true' ? 1 : 0);
+        }
+        if (skills) {
+            sql += ` ${ADMIN_ALL_JOBS_SKILLS_FILTER}`;
+            params.push(typeof skills === 'string' ? skills.split(',') : skills);
+        }
+
+        sql += sort_by === 'salary' ? ` ORDER BY j.salary_max DESC` : ` ORDER BY j.posted_at DESC`;
+
+        const rows = await pool.query(sql, params);
+
+        const data = rows.map(({ skills_list, job_id, employer_id, is_verified, ...rest }) => ({
+            ...rest,
+            job_id: Number(job_id),
+            employer_id: Number(employer_id),
+            is_verified: !!is_verified,
+            skills: skills_list ? skills_list.split(',') : []
+        }));
+
+        return res.status(200).json({ success: true, count: data.length, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Admin fetch failed.', details: error.message });
+    }
+};
+
+/**
+ * @desc    Get all platform users
+ * @route   GET /api/admin/users
+ * @access  Private (Admin only)
+ */
+export const getUsers = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_ALL_USERS);
+
+        return res.status(200).json({ success: true, count: rows.length, data: rows });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * @desc    Get one user by id
+ * @route   GET /api/admin/users/:user_id
+ * @access  Private (Admin only)
+ */
+export const getUserById = async (req, res) => {
+    const { user_id } = req.params;
+
+    try {
+        const rows = await pool.query(SELECT_USER_BY_ID, [user_id]);
+
+        if (!rows.length) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        return res.status(200).json({ success: true, data: rows[0] });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * @desc    Update user active status
+ * @route   PATCH /api/admin/users/:user_id/status
+ * @access  Private (Admin only)
+ */
+export const updateUserStatus = async (req, res) => {
+    const { user_id } = req.params;
+    const { is_active } = req.body;
+    const adminId = req.user.user_id;
+
+    if (typeof is_active !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'is_active must be boolean.' });
+    }
+
+    if (Number(user_id) === Number(adminId) && is_active === false) {
+        return res.status(400).json({ success: false, message: 'Admin cannot deactivate own account.' });
+    }
+
+    try {
+        const result = await pool.query(UPDATE_USER_ACTIVE_STATUS, [is_active ? 1 : 0, user_id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        return res.status(200).json({ success: true, message: 'User status updated.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * @desc    Delete a user (cascade from Users)
+ * @route   DELETE /api/admin/users/:user_id
+ * @access  Private (Admin only)
+ */
+export const deleteUser = async (req, res) => {
+    const { user_id } = req.params;
+    const adminId = req.user.user_id;
+
+    if (Number(user_id) === Number(adminId)) {
+        return res.status(400).json({ success: false, message: 'Admin cannot delete own account.' });
+    }
+
+    try {
+        const result = await pool.query(DELETE_USER, [user_id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        return res.status(200).json({ success: true, message: 'User deleted successfully.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * @desc    Delete a job as admin
+ * @route   DELETE /api/admin/jobs/:job_id
+ * @access  Private (Admin only)
+ */
+export const deleteJobAsAdmin = async (req, res) => {
+    const { job_id } = req.params;
+
+    try {
+        const result = await pool.query(DELETE_JOB, [job_id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Job not found.' });
+        }
+
+        return res.status(200).json({ success: true, message: 'Job deleted successfully.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const unverifyJob = async (req, res) => {
+    const { job_id } = req.params;
+    try {
+        const result = await pool.query(UNVERIFY_JOB, [job_id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Job not found.' });
+        }
+        return res.status(200).json({ success: true, message: 'Job unverified.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getAdminStats = async (req, res) => {
+    try {
+        const rows = await pool.query(ADMIN_STATS_QUERY);
+        const raw = rows[0];
+        return res.status(200).json({
+            success: true,
+            data: {
+                users:        { total: Number(raw.total_users), employers: Number(raw.total_employers), seekers: Number(raw.total_seekers) },
+                jobs:         { total: Number(raw.total_jobs), verified: Number(raw.verified_jobs), open: Number(raw.open_jobs) },
+                applications: {
+                    total:       Number(raw.total_applications),
+                    applied:     Number(raw.applications_applied),
+                    shortlisted: Number(raw.applications_shortlisted),
+                    rejected:    Number(raw.applications_rejected),
+                    hired:       Number(raw.applications_hired)
+                }
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getAllEmployers = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_ALL_EMPLOYERS);
+        const data = rows.map(row => ({ ...row, user_id: Number(row.user_id), total_jobs: Number(row.total_jobs) }));
+        return res.status(200).json({ success: true, count: data.length, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getAllSeekers = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_ALL_SEEKERS);
+        const data = rows.map(row => ({ ...row, user_id: Number(row.user_id), total_applications: Number(row.total_applications) }));
+        return res.status(200).json({ success: true, count: data.length, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+
+========================================================================================================================
+FILE: backend/controllers/authControllers.js
+------------------------------------------------------------------------------------------------------------------------
+import pool from '../config/db.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { ok, fail } from '../shared/responses/httpResponse.js';
+import {
+    SELECT_USER_BY_EMAIL,
+    SELECT_USER_ID_BY_EMAIL,
+    INSERT_USER,
+    INSERT_JOBSEEKER_PROFILE,
+    INSERT_EMPLOYER_PROFILE,
+    SELECT_AUTH_USER_BY_ID
+} from '../services/queries/authQueries.js';
+
+const signToken = (user_id, role) =>
+    jwt.sign({ user_id, role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+export const register = async (req, res) => {
+    const { email, password, role, secretKey, ...profileData } = req.body;
+
+    if (!email || !password || !role) {
+        return res.status(400).json({ success: false, message: "email, password and role are required." });
+    }
+
+    if (role === 'admin' && secretKey !== process.env.ADMIN_SECRET) {
+        return res.status(403).json({ success: false, message: "Invalid admin secret." });
+    }
+
+    let conn;
+    try {
+        conn = await pool.getConnection();
+
+        const [existing] = await conn.query(SELECT_USER_ID_BY_EMAIL, [email]);
+        if (existing) {
+            return res.status(409).json({ success: false, message: "Email already registered." });
+        }
+
+        await conn.beginTransaction();
+
+        const hash = await bcrypt.hash(password, 10);
+        const { insertId } = await conn.query(INSERT_USER, [email, hash, role]);
+        const userId = Number(insertId);
+
+        if (role === 'jobseeker') {
+            await conn.query(INSERT_JOBSEEKER_PROFILE, [
+                userId, profileData.full_name, profileData.education,
+                profileData.experience_years, profileData.phone_number
+            ]);
+        } else if (role === 'employer') {
+            await conn.query(INSERT_EMPLOYER_PROFILE, [
+                userId, profileData.company_name, profileData.industry,
+                profileData.company_size, profileData.company_location,
+                profileData.company_website, profileData.company_phone || null
+            ]);
+        }
+
+        await conn.commit();
+
+        const token = signToken(userId, role);
+        const [userRow] = await conn.query(SELECT_AUTH_USER_BY_ID, [userId]);
+        return ok(res, { ...userRow, token }, null, 201);
+
+    } catch (err) {
+        if (conn) await conn.rollback().catch(() => {});
+        const isConflict = err.errno === 1062;
+        return fail(res, isConflict ? "Email already exists." : "Internal server error.", isConflict ? 409 : 500);
+    } finally {
+        if (conn) conn.release();
+    }
+};
+
+export const login = async (req, res) => {
+    const { email, password } = req.body;
+    let conn;
+
+    try {
+        conn = await pool.getConnection();
+        const users = await conn.query(SELECT_USER_BY_EMAIL, [email]);
+
+        if (!users.length) {
+            return res.status(401).json({ success: false, message: "Invalid credentials." });
+        }
+
+        const user = users[0];
+        if (!user.is_active) {
+            return res.status(403).json({ success: false, message: "Account is deactivated. Contact admin." });
+        }
+
+        if (!await bcrypt.compare(password, user.password_hash)) {
+            return res.status(401).json({ success: false, message: "Invalid credentials." });
+        }
+
+        const token = signToken(user.user_id, user.role);
+        const { password_hash, ...userPublic } = user;
+        return ok(res, { ...userPublic, token });
+
+    } catch (err) {
+        return res.status(500).json({ success: false, message: "Internal server error." });
+    } finally {
+        if (conn) conn.release();
+    }
+};
+
+export const getMe = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_AUTH_USER_BY_ID, [req.user.user_id]);
+
+        if (!rows.length) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        return res.status(200).json({ success: true, data: rows[0] });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+========================================================================================================================
+FILE: backend/controllers/employerControllers.js
+------------------------------------------------------------------------------------------------------------------------
+import pool from '../config/db.js';
+import fs from 'fs';
+import path from 'path';
+import {
+    INSERT_JOB,
+    INSERT_SKILL_IGNORE,
+    SELECT_SKILL_ID_BY_NAME,
+    INSERT_JOB_SKILL,
+    SELECT_EMPLOYER_JOBS,
+    UPDATE_JOB,
+    DELETE_JOB_SKILLS,
+    UPDATE_JOB_STATUS,
+    JOB_APPLICANTS_BASE_QUERY,
+    UPDATE_APPLICATION_STATUS,
+    SELECT_JOB_OWNER,
+    DELETE_JOB,
+    SELECT_EMPLOYER_PROFILE,
+    EMPLOYER_STATS_QUERY,
+    EMPLOYER_APPLICATIONS_BY_STATUS,
+    SELECT_RESUME_DOWNLOAD_CONTEXT
+} from '../services/queries/employerQueries.js';
+
+async function upsertJobSkills(conn, jobId, skills) {
+    for (const skillName of skills) {
+        const normalized = skillName.trim().toLowerCase();
+        await conn.query(INSERT_SKILL_IGNORE, [normalized]);
+        const [skill] = await conn.query(SELECT_SKILL_ID_BY_NAME, [normalized]);
+        await conn.query(INSERT_JOB_SKILL, [jobId, skill.skill_id]);
+    }
+}
+
+// 1. Create Job
+export const createJob = async (req, res) => {
+    const employer_id = req.user.user_id;
+    const { title, description, location, job_type, salary_min, salary_max, skills } = req.body;
+    let conn;
+
+    try {
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        // 1. FIX: Remove the [brackets] from the variable name
+        const rawResponse = await conn.query(INSERT_JOB, [
+            employer_id, title, description, location, job_type, salary_min, salary_max
+        ]);
+
+        const jobId = Number(rawResponse.insertId);
+
+        if (skills?.length) await upsertJobSkills(conn, jobId, skills);
+
+        await conn.commit();
+        
+        return res.status(201).json({ success: true, message: "Job posted successfully!", job_id: jobId });
+
+    } catch (error) {
+        if (conn) await conn.rollback();
+        return res.status(500).json({ success: false, error: "Failed to post job.", details: error.message });
+    } finally {
+        if (conn) conn.release();
+    }
+};
+
+// 2. Get Employer Jobs
+export const getEmployerJobs = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_EMPLOYER_JOBS, [req.user.user_id]);
+        return res.status(200).json({ success: true, count: rows.length, data: rows });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 3. Update Job
+export const updateJob = async (req, res) => {
+    const employer_id = req.user.user_id;
+    const { job_id } = req.params;
+    const { title, description, location, job_type, salary_min, salary_max, skills } = req.body;
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        const result = await conn.query(UPDATE_JOB, [
+            title, description, location, job_type, salary_min, salary_max, job_id, employer_id
+        ]);
+        if (result.affectedRows === 0) throw new Error("Unauthorized or not found");
+
+        if (skills?.length) {
+            await conn.query(DELETE_JOB_SKILLS, [job_id]);
+            await upsertJobSkills(conn, job_id, skills);
+        }
+
+        await conn.commit();
+        return res.status(200).json({ success: true, message: "Job updated successfully!" });
+    } catch (error) {
+        if (conn) await conn.rollback();
+        return res.status(500).json({ success: false, error: error.message });
+    } finally {
+        if (conn) conn.release();
+    }
+};
+
+// 4. Update Job Status
+export const updateJobStatus = async (req, res) => {
+    const { job_id } = req.params;
+    const { status } = req.body;
+    try {
+        const result = await pool.query(UPDATE_JOB_STATUS, [status, job_id, req.user.user_id]);
+        if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Unauthorized." });
+        return res.status(200).json({ success: true, message: "Job status updated." });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 5. Get Job Applicants
+export const getJobApplicants = async (req, res) => {
+    const employer_id = req.user.user_id;
+    const { job_id } = req.params;
+    const { sort_by, proficiency, skill_name } = req.query;
+
+    try {
+        let sql = JOB_APPLICANTS_BASE_QUERY;
+        const params = [job_id, employer_id];
+
+        if (skill_name) {
+            sql += ` AND f_msk.skill_name = ?`;
+            params.push(skill_name.trim().toLowerCase());
+        }
+        if (proficiency) {
+            sql += ` AND f_sk.proficiency = ?`;
+            params.push(proficiency.toLowerCase());
+        }
+
+        sql += sort_by === 'experience'
+            ? ` ORDER BY s.experience_years DESC`
+            : ` ORDER BY a.applied_at DESC`;
+
+        const rows = await pool.query(sql, params);
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+        const data = rows.map(app => ({
+            application_id: Number(app.application_id),
+            application_status: app.application_status,
+            applied_at: app.applied_at,
+            seeker: {
+                seeker_id: Number(app.seeker_id),
+                full_name: app.full_name,
+                education: app.education,
+                experience_years: app.experience_years,
+                resume_url: app.resume_path
+                    ? `${baseUrl}/api/auth/resume-download/${Number(app.application_id)}`
+                    : null,
+                phone_number: app.phone_number,
+                skills: app.seeker_skills
+                    ? app.seeker_skills.split(',').map(pair => {
+                        const [name, proficiency] = pair.split(':');
+                        return { name, proficiency };
+                    })
+                    : []
+            }
+        }));
+
+        return res.status(200).json({ success: true, count: data.length, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: "Failed to fetch applicants.", details: error.message });
+    }
+};
+
+// 6. Update Application Status
+export const updateApplicationStatus = async (req, res) => {
+    const { application_id } = req.params;
+    const { status } = req.body;
+    try {
+        const result = await pool.query(UPDATE_APPLICATION_STATUS, [status, application_id, req.user.user_id]);
+        if (result.affectedRows === 0) return res.status(403).json({ success: false, message: "Unauthorized." });
+        return res.status(200).json({ success: true, message: "Status updated." });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 7. Delete Job
+export const deleteMyJob = async (req, res) => {
+    const jobId = req.params.job_id;
+    const employerId = req.user.user_id;
+
+    try {
+        const rows = await pool.query(SELECT_JOB_OWNER, [jobId]);
+
+        if (!rows.length) {
+            return res.status(404).json({ success: false, error: 'Job not found.' });
+        }
+        if (Number(rows[0].employer_id) !== Number(employerId)) {
+            return res.status(403).json({ success: false, error: 'Not authorized to delete this job.' });
+        }
+
+        await pool.query(DELETE_JOB, [jobId]);
+        return res.status(200).json({ success: true, message: 'Job deleted successfully.' });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 8. Get Employer Profile
+export const getEmployerProfile = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_EMPLOYER_PROFILE, [req.user.user_id]);
+        if (!rows.length) return res.status(404).json({ success: false, message: 'Employer profile not found.' });
+        return res.status(200).json({ success: true, data: rows[0] });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 9. Update Employer Profile
+export const updateEmployerProfile = async (req, res) => {
+    const allowedFields = ['company_name', 'company_phone', 'industry', 'company_size', 'company_location', 'company_website'];
+    const entries = Object.entries(req.body || {}).filter(([key]) => allowedFields.includes(key));
+
+    if (!entries.length) {
+        return res.status(400).json({ success: false, message: 'No valid fields provided for update.' });
+    }
+
+    try {
+        const setSql = entries.map(([key]) => `${key} = ?`).join(', ');
+        const params = [...entries.map(([, v]) => v), req.user.user_id];
+
+        const result = await pool.query(`UPDATE Employers SET ${setSql} WHERE employer_id = ?`, params);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Employer profile not found.' });
+        }
+        return res.status(200).json({ success: true, message: 'Employer profile updated successfully.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 10. Employer Stats
+export const getEmployerStats = async (req, res) => {
+    const employer_id = req.user.user_id;
+    try {
+        const [totals] = await pool.query(EMPLOYER_STATS_QUERY, [employer_id]);
+        const statusRows = await pool.query(EMPLOYER_APPLICATIONS_BY_STATUS, [employer_id]);
+
+        const applications_by_status = Object.fromEntries(
+            statusRows.map(({ status, count }) => [status, Number(count)])
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                total_jobs:        Number(totals?.total_jobs ?? 0),
+                open_jobs:         Number(totals?.open_jobs ?? 0),
+                closed_jobs:       Number(totals?.closed_jobs ?? 0),
+                verified_jobs:     Number(totals?.verified_jobs ?? 0),
+                total_applications: Number(totals?.total_applications ?? 0),
+                applications_by_status
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+
+// 11. Download Candidate Resume (employer OR owner seeker)
+export const downloadCandidateResume = async (req, res) => {
+    const { application_id } = req.params;
+    const requesterId = Number(req.user.user_id);
+    const role = req.user.role;
+
+    if (!/^\d+$/.test(String(application_id))) {
+        return res.status(400).json({ success: false, message: 'Invalid application_id.' });
+    }
+
+    try {
+        const [row] = await pool.query(SELECT_RESUME_DOWNLOAD_CONTEXT, [application_id]);
+
+        if (!row) {
+            return res.status(404).json({ success: false, message: 'Resume not found.' });
+        }
+
+        const isOwnerEmployer = role === 'employer' && Number(row.employer_id) === requesterId;
+        const isOwnerSeeker = role === 'jobseeker' && Number(row.seeker_id) === requesterId;
+
+        if (!isOwnerEmployer && !isOwnerSeeker) {
+            return res.status(403).json({ success: false, message: 'Not authorized to download this resume.' });
+        }
+
+        const safeFilename = path.basename(String(row.resume_path));
+        const absolutePath = path.resolve(process.cwd(), 'uploads', safeFilename);
+
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({ success: false, message: 'Resume file missing on server.' });
+        }
+
+        const downloadName = row.resume_filename || `resume-${Number(row.seeker_id)}.pdf`;
+        return res.download(absolutePath, downloadName);
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+
+
+
+
+========================================================================================================================
+FILE: backend/controllers/publicControllers.js
+------------------------------------------------------------------------------------------------------------------------
+import pool from '../config/db.js';
+import {
+    PUBLIC_JOBS_BASE_QUERY,
+    PUBLIC_JOBS_SKILLS_FILTER,
+    PUBLIC_JOB_BY_ID_QUERY,
+    SKILLS_LIST_BASE_QUERY
+} from '../services/queries/publicQueries.js';
+
+const toSkillsArray = (skillsList) => (skillsList ? skillsList.split(',') : []);
+
+const parseLimit = (rawLimit, defaultLimit = null, maxLimit = 50) => {
+    if (rawLimit === undefined || rawLimit === null || rawLimit === '') {
+        return defaultLimit;
+    }
+
+    const parsed = Number(rawLimit);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+        return defaultLimit;
+    }
+
+    return Math.min(parsed, maxLimit);
+};
+
+export const getPublicJobs = async (req, res) => {
+    try {
+        const { search, location, job_type, sort_by, skills } = req.query;
+        const limit = parseLimit(req.query.limit, null);
+
+        let sql = PUBLIC_JOBS_BASE_QUERY;
+
+        const params = [];
+
+        if (search) {
+            sql += ` AND j.title LIKE ?`;
+            params.push(`%${search}%`);
+        }
+
+        if (location) {
+            sql += ` AND j.location = ?`;
+            params.push(location);
+        }
+
+        if (job_type) {
+            sql += ` AND j.job_type = ?`;
+            params.push(job_type);
+        }
+
+        if (skills) {
+            sql += PUBLIC_JOBS_SKILLS_FILTER;
+            params.push(typeof skills === 'string' ? skills.split(',') : skills);
+        }
+
+        if (sort_by === 'salary') {
+            sql += ` ORDER BY j.salary_max DESC`;
+        } else {
+            sql += ` ORDER BY j.posted_at DESC`;
+        }
+
+        if (limit !== null) {
+            sql += ` LIMIT ${limit}`;
+        }
+
+        const rows = await pool.query(sql, params);
+
+        const data = rows.map(({ skills_list, job_id, employer_id, ...rest }) => ({
+            ...rest,
+            job_id: Number(job_id),
+            employer_id: Number(employer_id),
+            skills: toSkillsArray(skills_list)
+        }));
+
+        return res.status(200).json({ success: true, count: data.length, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Public fetch failed.', details: error.message });
+    }
+};
+
+export const getLandingJobs = (req, res) => {
+    const requestLike = {
+        query: { limit: '6', sort_by: 'date', ...req.query }
+    };
+
+    return getPublicJobs(requestLike, res);
+};
+
+export const getJobById = async (req, res) => {
+    const { job_id: requested_job_id } = req.params;
+
+    try {
+        const rows = await pool.query(PUBLIC_JOB_BY_ID_QUERY, [requested_job_id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Job not found or unavailable.' });
+        }
+
+        const { skills_list, job_id: row_job_id, employer_id, ...rest } = rows[0];
+        const job = {
+            ...rest,
+            job_id: Number(row_job_id),
+            employer_id: Number(employer_id),
+            skills: toSkillsArray(skills_list)
+        };
+
+        return res.status(200).json({ success: true, data: job });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Job detail fetch failed.', details: error.message });
+    }
+};
+
+export const getSkillsList = async (req, res) => {
+    const { search } = req.query;
+
+    try {
+        let sql = SKILLS_LIST_BASE_QUERY;
+        const params = [];
+
+        if (search && search.trim() !== '') {
+            sql += ` WHERE skill_name LIKE ?`;
+            params.push(`%${search}%`);
+        }
+
+        sql += ` ORDER BY skill_name ASC`;
+
+        const rows = await pool.query(sql, params);
+        return res.status(200).json({ success: true, count: rows.length, data: rows });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Skills fetch failed.', details: error.message });
+    }
+};
+
+
+========================================================================================================================
+FILE: backend/controllers/seekerControllers.js
+------------------------------------------------------------------------------------------------------------------------
+import pool from '../config/db.js';
+import fs from 'fs';
+import path from 'path';
+import {
+    SELECT_SEEKER_RESUME,
+    INSERT_APPLICATION,
+    SELECT_SEEKER_APPLICATIONS,
+    DELETE_SEEKER_APPLICATION,
+    UPDATE_SEEKER_RESUME,
+    DELETE_SEEKER_SKILLS,
+    INSERT_SKILL_IGNORE,
+    SELECT_SKILL_ID_BY_NAME,
+    INSERT_SEEKER_SKILL,
+    SELECT_SEEKER_PROFILE,
+    SELECT_SEEKER_PROFILE_SKILLS,
+    INSERT_SAVED_JOB,
+    SELECT_SAVED_JOBS,
+    DELETE_SAVED_JOB,
+    SEEKER_STATS_QUERY,
+    SELECT_SEEKER_RESUME_FILE,
+    SELECT_PUBLIC_JOB_EXISTS,
+    SELECT_JOB_SKILL_NAMES,
+    SELECT_SEEKER_SKILL_NAMES
+} from '../services/queries/seekerQueries.js';
+
+// 1. Apply for Job
+export const applyForJob = async (req, res) => {
+    const seeker_id = req.user.user_id;
+    const { job_id } = req.params;
+
+    try {
+        const rows = await pool.query(SELECT_SEEKER_RESUME, [seeker_id]);
+
+        if (!rows[0]?.resume_path) {
+            return res.status(400).json({
+                success: false,
+                message: "No resume found. Please upload a PDF in profile settings first."
+            });
+        }
+
+        const { insertId } = await pool.query(INSERT_APPLICATION, [job_id, seeker_id]);
+
+        return res.status(201).json({
+            success: true,
+            message: "Application submitted successfully!",
+            data: { application_id: Number(insertId), seeker_id: Number(seeker_id) }
+        });
+
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY' || err.errno === 1062) {
+            return res.status(409).json({ success: false, message: "You have already applied for this job." });
+        }
+        return res.status(500).json({ success: false, error: "Internal Server Error", details: err.message });
+    }
+};
+
+// 2. Get My Applications
+export const getSeekerApplications = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_SEEKER_APPLICATIONS, [req.user.user_id]);
+        return res.status(200).json({ success: true, data: rows, count: rows.length });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 3. Revoke Application
+export const revokeApplication = async (req, res) => {
+    const { application_id } = req.params;
+    try {
+        const result = await pool.query(DELETE_SEEKER_APPLICATION, [application_id, req.user.user_id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "Application not found or unauthorized." });
+        }
+        return res.status(200).json({ success: true, message: "Application revoked." });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 4. Update Resume
+export const updateResume = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file uploaded. Please select a PDF." });
+    }
+
+    try {
+        const resumePath = `/uploads/${req.file.filename}`;
+        const resumeName = req.file.originalname;
+
+        const result = await pool.query(UPDATE_SEEKER_RESUME, [resumePath, resumeName, req.user.user_id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: "User profile not found." });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Resume updated successfully!",
+            data: { path: resumePath, filename: resumeName }
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: "Internal Server Error", details: err.message });
+    }
+};
+
+// 4b. Download My Resume
+export const downloadMyResume = async (req, res) => {
+    const seeker_id = req.user.user_id;
+
+    try {
+        const [row] = await pool.query(SELECT_SEEKER_RESUME_FILE, [seeker_id]);
+
+        if (!row?.resume_path) {
+            return res.status(404).json({ success: false, message: 'No resume found for this account.' });
+        }
+
+        const safeFilename = path.basename(String(row.resume_path));
+        const absolutePath = path.resolve(process.cwd(), 'uploads', safeFilename);
+
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({ success: false, message: 'Resume file missing on server.' });
+        }
+
+        const downloadName = row.resume_filename || `resume-${Number(seeker_id)}.pdf`;
+        return res.download(absolutePath, downloadName);
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 5. Update Skills
+export const updateSkills = async (req, res) => {
+    const seeker_id = req.user.user_id;
+    const { skills } = req.body;
+
+    if (!Array.isArray(skills)) {
+        return res.status(400).json({ success: false, message: "Skills must be an array of objects." });
+    }
+
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        await conn.query(DELETE_SEEKER_SKILLS, [seeker_id]);
+
+        for (const skillObj of skills) {
+            const normalized = skillObj.name.trim().toLowerCase();
+            const proficiency = skillObj.proficiency || 'beginner';
+
+            await conn.query(INSERT_SKILL_IGNORE, [normalized]);
+            const [skill] = await conn.query(SELECT_SKILL_ID_BY_NAME, [normalized]);
+
+            if (skill) {
+                await conn.query(INSERT_SEEKER_SKILL, [seeker_id, skill.skill_id, proficiency]);
+            }
+        }
+
+        await conn.commit();
+        return res.status(200).json({ success: true, message: "Skills updated." });
+
+    } catch (error) {
+        if (conn) await conn.rollback();
+        if (error.errno === 1265) {
+            return res.status(400).json({ success: false, error: "Invalid proficiency. Use: beginner, intermediate, or advanced." });
+        }
+        return res.status(500).json({ success: false, error: error.message });
+    } finally {
+        if (conn) conn.release();
+    }
+};
+
+// 6. Get Seeker Profile
+export const getSeekerProfile = async (req, res) => {
+    try {
+        const profileRows = await pool.query(SELECT_SEEKER_PROFILE, [req.user.user_id]);
+
+        if (!profileRows.length) {
+            return res.status(404).json({ success: false, message: 'Profile not found.' });
+        }
+
+        const skillRows = await pool.query(SELECT_SEEKER_PROFILE_SKILLS, [req.user.user_id]);
+
+        return res.status(200).json({
+            success: true,
+            data: { ...profileRows[0], skills: skillRows }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 7. Update Seeker Profile
+export const updateSeekerProfile = async (req, res) => {
+    const allowedFields = ['full_name', 'phone_number', 'education', 'experience_years'];
+    const entries = Object.entries(req.body || {}).filter(([key]) => allowedFields.includes(key));
+
+    if (!entries.length) {
+        return res.status(400).json({ success: false, message: 'No valid fields provided for update.' });
+    }
+
+    try {
+        const setSql = entries.map(([key]) => `${key} = ?`).join(', ');
+        const params = [...entries.map(([, v]) => v), req.user.user_id];
+
+        const result = await pool.query(`UPDATE JobSeekers SET ${setSql} WHERE seeker_id = ?`, params);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Profile not found.' });
+        }
+        return res.status(200).json({ success: true, message: 'Profile updated successfully.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 8. Save Job
+export const saveJob = async (req, res) => {
+    try {
+        await pool.query(INSERT_SAVED_JOB, [req.user.user_id, req.params.job_id]);
+        return res.status(201).json({ success: true, message: 'Job saved successfully.' });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+            return res.status(409).json({ success: false, message: 'Job already saved.' });
+        }
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 9. Get Saved Jobs
+export const getSavedJobs = async (req, res) => {
+    try {
+        const rows = await pool.query(SELECT_SAVED_JOBS, [req.user.user_id]);
+
+        const data = rows.map(({ skills_list, job_id, ...rest }) => ({
+            ...rest,
+            job_id: Number(job_id),
+            skills: skills_list ? skills_list.split(',') : []
+        }));
+
+        return res.status(200).json({ success: true, count: data.length, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 10. Remove Saved Job
+export const removeSavedJob = async (req, res) => {
+    try {
+        const result = await pool.query(DELETE_SAVED_JOB, [req.user.user_id, req.params.job_id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Saved job not found.' });
+        }
+        return res.status(200).json({ success: true, message: 'Saved job removed successfully.' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 11. Seeker Stats
+export const getSeekerStats = async (req, res) => {
+    try {
+        const rows = await pool.query(SEEKER_STATS_QUERY, [req.user.user_id]);
+
+        if (!rows.length) {
+            return res.status(404).json({ success: false, message: 'Profile not found.' });
+        }
+
+        const raw = rows[0];
+        return res.status(200).json({
+            success: true,
+            data: {
+                total_applications: Number(raw.total_applications ?? 0),
+                applications_by_status: {
+                    applied:     Number(raw.applied ?? 0),
+                    shortlisted: Number(raw.shortlisted ?? 0),
+                    rejected:    Number(raw.rejected ?? 0),
+                    hired:       Number(raw.hired ?? 0)
+                },
+                saved_jobs:   Number(raw.saved_jobs ?? 0),
+                skills_count: Number(raw.skills_count ?? 0)
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// 12. Job Skill Match Percentage
+export const getJobSkillMatch = async (req, res) => {
+    const seeker_id = req.user.user_id;
+    const { job_id } = req.params;
+
+    if (!job_id || isNaN(job_id)) {
+        return res.status(400).json({ success: false, message: 'Invalid job_id.' });
+    }
+
+    try {
+        const [job] = await pool.query(SELECT_PUBLIC_JOB_EXISTS, [job_id]);
+
+        if (!job) {
+            return res.status(404).json({ success: false, message: 'Job not found or unavailable.' });
+        }
+
+        const jobSkillsRows = await pool.query(SELECT_JOB_SKILL_NAMES, [job_id]);
+        const seekerSkillsRows = await pool.query(SELECT_SEEKER_SKILL_NAMES, [seeker_id]);
+
+        const normalize = (name) => String(name || '').trim().toLowerCase();
+
+        const jobSkillsSet = new Set(
+            jobSkillsRows.map((row) => normalize(row.skill_name)).filter(Boolean)
+        );
+        const seekerSkillsSet = new Set(
+            seekerSkillsRows.map((row) => normalize(row.skill_name)).filter(Boolean)
+        );
+
+        const jobSkills = [...jobSkillsSet];
+        const matchedSkills = jobSkills.filter((skill) => seekerSkillsSet.has(skill));
+        const missingSkills = jobSkills.filter((skill) => !seekerSkillsSet.has(skill));
+
+        const totalJobSkills = jobSkills.length;
+        const matchedCount = matchedSkills.length;
+        const matchPercentage = totalJobSkills === 0
+            ? 100
+            : Number(((matchedCount / totalJobSkills) * 100).toFixed(2));
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                job_id: Number(job_id),
+                seeker_id: Number(seeker_id),
+                match_percentage: matchPercentage,
+                matched_skills_count: matchedCount,
+                total_job_skills: totalJobSkills,
+                matched_skills: matchedSkills,
+                missing_skills: missingSkills
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getEmployerDetails = async (req, res) => {
+    const seeker_id = req.user.user_id;
+    const { job_id } = req.params;
+    try{
+        const row = await  pool.query(`select e.employer_id, e.company_name, e.company_phone, e.industry, e.company_size, e.company_location, e.company_website from jobs j join employers e on j.employer_id = e.employer_id where j.job_id = ?`, [job_id]);
+        if(!row.length){
+            return res.status(404).json({ success: false, message: 'Job not found.' });
+        }else{
+            return res.status(200).json({ success: true, data: row[0] });
+        }
+    }catch(error){
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+========================================================================================================================
+FILE: backend/middleware/authMiddleware.js
+------------------------------------------------------------------------------------------------------------------------
+import jwt from 'jsonwebtoken';
+import pool from '../config/db.js';
+import { SELECT_AUTH_USER_BY_ID } from '../services/queries/authQueries.js';
+
+export const verifyToken = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Access denied. No token provided." });
+    }
+
+    let decoded;
+    try {
+        decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    } catch {
+        return res.status(403).json({ error: "Invalid or expired token." });
+    }
+
+    try {
+        const rows = await pool.query(SELECT_AUTH_USER_BY_ID, [decoded.user_id]);
+        const user = rows[0];
+
+        if (!user) {
+            return res.status(401).json({ error: "User not found for token." });
+        }
+
+        if (!user.is_active) {
+            return res.status(403).json({ error: "Account is deactivated." });
+        }
+
+        req.user = {
+            user_id: Number(user.user_id),
+            role: user.role,
+            email: user.email
+        };
+
+        return next();
+    } catch {
+        return res.status(500).json({ error: "Failed to validate session." });
+    }
+};
+
+export const isEmployer = (req, res, next) => {
+    if (req.user?.role === 'employer') return next();
+    return res.status(403).json({ error: "Access denied. Employers only." });
+};
+
+export const isSeeker = (req, res, next) => {
+    if (req.user?.role === 'jobseeker') return next();
+    return res.status(403).json({ error: "Access denied. Job seekers only." });
+};
+
+export const isAdmin = (req, res, next) => {
+    if (req.user?.role === 'admin') return next();
+    return res.status(403).json({ error: "Access denied. Admins only." });
+};
+
+========================================================================================================================
+FILE: backend/middleware/uploadMiddleware.js
+------------------------------------------------------------------------------------------------------------------------
+import multer from 'multer';
+import path from 'path';
+
+// 1. Storage Configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Save to our new folder
+    },
+    filename: (req, file, cb) => {
+        // Create a unique name: resume-userID-timestamp.pdf
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `resume-${req.user.user_id}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
+});
+
+// 2. The PDF Bouncer
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only PDFs allowed!'), false);
+    }
+};
+
+export const upload = multer({ storage, fileFilter });
+
+========================================================================================================================
+FILE: backend/package.json
+------------------------------------------------------------------------------------------------------------------------
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed": "node scripts/seed.js",
+    "seed:reset": "node scripts/reset-seed.js && node scripts/seed.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mariadb": "^3.5.1",
+    "multer": "^2.1.0"
+  }
+}
+
+
+========================================================================================================================
+FILE: backend/package-lock.json
+------------------------------------------------------------------------------------------------------------------------
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "backend",
+      "version": "1.0.0",
+      "license": "ISC",
+      "dependencies": {
+        "bcryptjs": "^3.0.3",
+        "cors": "^2.8.6",
+        "dotenv": "^17.3.1",
+        "express": "^5.2.1",
+        "jsonwebtoken": "^9.0.3",
+        "mariadb": "^3.5.1",
+        "multer": "^2.1.0"
+      }
+    },
+    "node_modules/accepts": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz",
+      "integrity": "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-types": "^3.0.0",
+        "negotiator": "^1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/append-field": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/append-field/-/append-field-1.0.0.tgz",
+      "integrity": "sha512-klpgFSWLW1ZEs8svjfb7g4qWY0YS5imI82dTg+QahUvJ8YqAY0P10Uk8tTyh9ZGuYEZEMaeJYCF5BFuX552hsw==",
+      "license": "MIT"
+    },
+    "node_modules/bcryptjs": {
+      "version": "3.0.3",
+      "resolved": "https://registry.npmjs.org/bcryptjs/-/bcryptjs-3.0.3.tgz",
+      "integrity": "sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==",
+      "license": "BSD-3-Clause",
+      "bin": {
+        "bcrypt": "bin/bcrypt"
+      }
+    },
+    "node_modules/body-parser": {
+      "version": "2.2.2",
+      "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.2.2.tgz",
+      "integrity": "sha512-oP5VkATKlNwcgvxi0vM0p/D3n2C3EReYVX+DNYs5TjZFn/oQt2j+4sVJtSMr18pdRr8wjTcBl6LoV+FUwzPmNA==",
+      "license": "MIT",
+      "dependencies": {
+        "bytes": "^3.1.2",
+        "content-type": "^1.0.5",
+        "debug": "^4.4.3",
+        "http-errors": "^2.0.0",
+        "iconv-lite": "^0.7.0",
+        "on-finished": "^2.4.1",
+        "qs": "^6.14.1",
+        "raw-body": "^3.0.1",
+        "type-is": "^2.0.1"
+      },
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/buffer-equal-constant-time": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/buffer-equal-constant-time/-/buffer-equal-constant-time-1.0.1.tgz",
+      "integrity": "sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==",
+      "license": "BSD-3-Clause"
+    },
+    "node_modules/buffer-from": {
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/buffer-from/-/buffer-from-1.1.2.tgz",
+      "integrity": "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==",
+      "license": "MIT"
+    },
+    "node_modules/busboy": {
+      "version": "1.6.0",
+      "resolved": "https://registry.npmjs.org/busboy/-/busboy-1.6.0.tgz",
+      "integrity": "sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==",
+      "dependencies": {
+        "streamsearch": "^1.1.0"
+      },
+      "engines": {
+        "node": ">=10.16.0"
+      }
+    },
+    "node_modules/bytes": {
+      "version": "3.1.2",
+      "resolved": "https://registry.npmjs.org/bytes/-/bytes-3.1.2.tgz",
+      "integrity": "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/call-bind-apply-helpers": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz",
+      "integrity": "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "function-bind": "^1.1.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/call-bound": {
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/call-bound/-/call-bound-1.0.4.tgz",
+      "integrity": "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bind-apply-helpers": "^1.0.2",
+        "get-intrinsic": "^1.3.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/concat-stream": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/concat-stream/-/concat-stream-2.0.0.tgz",
+      "integrity": "sha512-MWufYdFw53ccGjCA+Ol7XJYpAlW6/prSMzuPOTRnJGcGzuhLn4Scrz7qf6o8bROZ514ltazcIFJZevcfbo0x7A==",
+      "engines": [
+        "node >= 6.0"
+      ],
+      "license": "MIT",
+      "dependencies": {
+        "buffer-from": "^1.0.0",
+        "inherits": "^2.0.3",
+        "readable-stream": "^3.0.2",
+        "typedarray": "^0.0.6"
+      }
+    },
+    "node_modules/content-disposition": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-1.0.1.tgz",
+      "integrity": "sha512-oIXISMynqSqm241k6kcQ5UwttDILMK4BiurCfGEREw6+X9jkkpEe5T9FZaApyLGGOnFuyMWZpdolTXMtvEJ08Q==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/content-type": {
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/content-type/-/content-type-1.0.5.tgz",
+      "integrity": "sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/cookie": {
+      "version": "0.7.2",
+      "resolved": "https://registry.npmjs.org/cookie/-/cookie-0.7.2.tgz",
+      "integrity": "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/cookie-signature": {
+      "version": "1.2.2",
+      "resolved": "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.2.tgz",
+      "integrity": "sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=6.6.0"
+      }
+    },
+    "node_modules/cors": {
+      "version": "2.8.6",
+      "resolved": "https://registry.npmjs.org/cors/-/cors-2.8.6.tgz",
+      "integrity": "sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==",
+      "license": "MIT",
+      "dependencies": {
+        "object-assign": "^4",
+        "vary": "^1"
+      },
+      "engines": {
+        "node": ">= 0.10"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/debug": {
+      "version": "4.4.3",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+      "license": "MIT",
+      "dependencies": {
+        "ms": "^2.1.3"
+      },
+      "engines": {
+        "node": ">=6.0"
+      },
+      "peerDependenciesMeta": {
+        "supports-color": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/denque": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/denque/-/denque-2.1.0.tgz",
+      "integrity": "sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==",
+      "license": "Apache-2.0",
+      "engines": {
+        "node": ">=0.10"
+      }
+    },
+    "node_modules/depd": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/depd/-/depd-2.0.0.tgz",
+      "integrity": "sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/dotenv": {
+      "version": "17.3.1",
+      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-17.3.1.tgz",
+      "integrity": "sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA==",
+      "license": "BSD-2-Clause",
+      "engines": {
+        "node": ">=12"
+      },
+      "funding": {
+        "url": "https://dotenvx.com"
+      }
+    },
+    "node_modules/dunder-proto": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
+      "integrity": "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bind-apply-helpers": "^1.0.1",
+        "es-errors": "^1.3.0",
+        "gopd": "^1.2.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/ecdsa-sig-formatter": {
+      "version": "1.0.11",
+      "resolved": "https://registry.npmjs.org/ecdsa-sig-formatter/-/ecdsa-sig-formatter-1.0.11.tgz",
+      "integrity": "sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==",
+      "license": "Apache-2.0",
+      "dependencies": {
+        "safe-buffer": "^5.0.1"
+      }
+    },
+    "node_modules/ee-first": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz",
+      "integrity": "sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==",
+      "license": "MIT"
+    },
+    "node_modules/encodeurl": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/encodeurl/-/encodeurl-2.0.0.tgz",
+      "integrity": "sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/es-define-property": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz",
+      "integrity": "sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es-errors": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
+      "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es-object-atoms": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.1.tgz",
+      "integrity": "sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/escape-html": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz",
+      "integrity": "sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow==",
+      "license": "MIT"
+    },
+    "node_modules/etag": {
+      "version": "1.8.1",
+      "resolved": "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz",
+      "integrity": "sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/express": {
+      "version": "5.2.1",
+      "resolved": "https://registry.npmjs.org/express/-/express-5.2.1.tgz",
+      "integrity": "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==",
+      "license": "MIT",
+      "dependencies": {
+        "accepts": "^2.0.0",
+        "body-parser": "^2.2.1",
+        "content-disposition": "^1.0.0",
+        "content-type": "^1.0.5",
+        "cookie": "^0.7.1",
+        "cookie-signature": "^1.2.1",
+        "debug": "^4.4.0",
+        "depd": "^2.0.0",
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "etag": "^1.8.1",
+        "finalhandler": "^2.1.0",
+        "fresh": "^2.0.0",
+        "http-errors": "^2.0.0",
+        "merge-descriptors": "^2.0.0",
+        "mime-types": "^3.0.0",
+        "on-finished": "^2.4.1",
+        "once": "^1.4.0",
+        "parseurl": "^1.3.3",
+        "proxy-addr": "^2.0.7",
+        "qs": "^6.14.0",
+        "range-parser": "^1.2.1",
+        "router": "^2.2.0",
+        "send": "^1.1.0",
+        "serve-static": "^2.2.0",
+        "statuses": "^2.0.1",
+        "type-is": "^2.0.1",
+        "vary": "^1.1.2"
+      },
+      "engines": {
+        "node": ">= 18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/finalhandler": {
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/finalhandler/-/finalhandler-2.1.1.tgz",
+      "integrity": "sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==",
+      "license": "MIT",
+      "dependencies": {
+        "debug": "^4.4.0",
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "on-finished": "^2.4.1",
+        "parseurl": "^1.3.3",
+        "statuses": "^2.0.1"
+      },
+      "engines": {
+        "node": ">= 18.0.0"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/forwarded": {
+      "version": "0.2.0",
+      "resolved": "https://registry.npmjs.org/forwarded/-/forwarded-0.2.0.tgz",
+      "integrity": "sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/fresh": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/fresh/-/fresh-2.0.0.tgz",
+      "integrity": "sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/function-bind": {
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz",
+      "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==",
+      "license": "MIT",
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/get-intrinsic": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/get-intrinsic/-/get-intrinsic-1.3.0.tgz",
+      "integrity": "sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bind-apply-helpers": "^1.0.2",
+        "es-define-property": "^1.0.1",
+        "es-errors": "^1.3.0",
+        "es-object-atoms": "^1.1.1",
+        "function-bind": "^1.1.2",
+        "get-proto": "^1.0.1",
+        "gopd": "^1.2.0",
+        "has-symbols": "^1.1.0",
+        "hasown": "^2.0.2",
+        "math-intrinsics": "^1.1.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/get-proto": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/get-proto/-/get-proto-1.0.1.tgz",
+      "integrity": "sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==",
+      "license": "MIT",
+      "dependencies": {
+        "dunder-proto": "^1.0.1",
+        "es-object-atoms": "^1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/gopd": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
+      "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/has-symbols": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/has-symbols/-/has-symbols-1.1.0.tgz",
+      "integrity": "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/hasown": {
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.2.tgz",
+      "integrity": "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==",
+      "license": "MIT",
+      "dependencies": {
+        "function-bind": "^1.1.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/http-errors": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-2.0.1.tgz",
+      "integrity": "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==",
+      "license": "MIT",
+      "dependencies": {
+        "depd": "~2.0.0",
+        "inherits": "~2.0.4",
+        "setprototypeof": "~1.2.0",
+        "statuses": "~2.0.2",
+        "toidentifier": "~1.0.1"
+      },
+      "engines": {
+        "node": ">= 0.8"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/iconv-lite": {
+      "version": "0.7.2",
+      "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.7.2.tgz",
+      "integrity": "sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==",
+      "license": "MIT",
+      "dependencies": {
+        "safer-buffer": ">= 2.1.2 < 3.0.0"
+      },
+      "engines": {
+        "node": ">=0.10.0"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/inherits": {
+      "version": "2.0.4",
+      "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz",
+      "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
+      "license": "ISC"
+    },
+    "node_modules/ipaddr.js": {
+      "version": "1.9.1",
+      "resolved": "https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.9.1.tgz",
+      "integrity": "sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.10"
+      }
+    },
+    "node_modules/is-promise": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/is-promise/-/is-promise-4.0.0.tgz",
+      "integrity": "sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==",
+      "license": "MIT"
+    },
+    "node_modules/jsonwebtoken": {
+      "version": "9.0.3",
+      "resolved": "https://registry.npmjs.org/jsonwebtoken/-/jsonwebtoken-9.0.3.tgz",
+      "integrity": "sha512-MT/xP0CrubFRNLNKvxJ2BYfy53Zkm++5bX9dtuPbqAeQpTVe0MQTFhao8+Cp//EmJp244xt6Drw/GVEGCUj40g==",
+      "license": "MIT",
+      "dependencies": {
+        "jws": "^4.0.1",
+        "lodash.includes": "^4.3.0",
+        "lodash.isboolean": "^3.0.3",
+        "lodash.isinteger": "^4.0.4",
+        "lodash.isnumber": "^3.0.3",
+        "lodash.isplainobject": "^4.0.6",
+        "lodash.isstring": "^4.0.1",
+        "lodash.once": "^4.0.0",
+        "ms": "^2.1.1",
+        "semver": "^7.5.4"
+      },
+      "engines": {
+        "node": ">=12",
+        "npm": ">=6"
+      }
+    },
+    "node_modules/jwa": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/jwa/-/jwa-2.0.1.tgz",
+      "integrity": "sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg==",
+      "license": "MIT",
+      "dependencies": {
+        "buffer-equal-constant-time": "^1.0.1",
+        "ecdsa-sig-formatter": "1.0.11",
+        "safe-buffer": "^5.0.1"
+      }
+    },
+    "node_modules/jws": {
+      "version": "4.0.1",
+      "resolved": "https://registry.npmjs.org/jws/-/jws-4.0.1.tgz",
+      "integrity": "sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==",
+      "license": "MIT",
+      "dependencies": {
+        "jwa": "^2.0.1",
+        "safe-buffer": "^5.0.1"
+      }
+    },
+    "node_modules/lodash.includes": {
+      "version": "4.3.0",
+      "resolved": "https://registry.npmjs.org/lodash.includes/-/lodash.includes-4.3.0.tgz",
+      "integrity": "sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==",
+      "license": "MIT"
+    },
+    "node_modules/lodash.isboolean": {
+      "version": "3.0.3",
+      "resolved": "https://registry.npmjs.org/lodash.isboolean/-/lodash.isboolean-3.0.3.tgz",
+      "integrity": "sha512-Bz5mupy2SVbPHURB98VAcw+aHh4vRV5IPNhILUCsOzRmsTmSQ17jIuqopAentWoehktxGd9e/hbIXq980/1QJg==",
+      "license": "MIT"
+    },
+    "node_modules/lodash.isinteger": {
+      "version": "4.0.4",
+      "resolved": "https://registry.npmjs.org/lodash.isinteger/-/lodash.isinteger-4.0.4.tgz",
+      "integrity": "sha512-DBwtEWN2caHQ9/imiNeEA5ys1JoRtRfY3d7V9wkqtbycnAmTvRRmbHKDV4a0EYc678/dia0jrte4tjYwVBaZUA==",
+      "license": "MIT"
+    },
+    "node_modules/lodash.isnumber": {
+      "version": "3.0.3",
+      "resolved": "https://registry.npmjs.org/lodash.isnumber/-/lodash.isnumber-3.0.3.tgz",
+      "integrity": "sha512-QYqzpfwO3/CWf3XP+Z+tkQsfaLL/EnUlXWVkIk5FUPc4sBdTehEqZONuyRt2P67PXAk+NXmTBcc97zw9t1FQrw==",
+      "license": "MIT"
+    },
+    "node_modules/lodash.isplainobject": {
+      "version": "4.0.6",
+      "resolved": "https://registry.npmjs.org/lodash.isplainobject/-/lodash.isplainobject-4.0.6.tgz",
+      "integrity": "sha512-oSXzaWypCMHkPC3NvBEaPHf0KsA5mvPrOPgQWDsbg8n7orZ290M0BmC/jgRZ4vcJ6DTAhjrsSYgdsW/F+MFOBA==",
+      "license": "MIT"
+    },
+    "node_modules/lodash.isstring": {
+      "version": "4.0.1",
+      "resolved": "https://registry.npmjs.org/lodash.isstring/-/lodash.isstring-4.0.1.tgz",
+      "integrity": "sha512-0wJxfxH1wgO3GrbuP+dTTk7op+6L41QCXbGINEmD+ny/G/eCqGzxyCsh7159S+mgDDcoarnBw6PC1PS5+wUGgw==",
+      "license": "MIT"
+    },
+    "node_modules/lodash.once": {
+      "version": "4.1.1",
+      "resolved": "https://registry.npmjs.org/lodash.once/-/lodash.once-4.1.1.tgz",
+      "integrity": "sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==",
+      "license": "MIT"
+    },
+    "node_modules/lru-cache": {
+      "version": "10.4.3",
+      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-10.4.3.tgz",
+      "integrity": "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==",
+      "license": "ISC"
+    },
+    "node_modules/mariadb": {
+      "version": "3.5.1",
+      "resolved": "https://registry.npmjs.org/mariadb/-/mariadb-3.5.1.tgz",
+      "integrity": "sha512-ObKf/e7jU8pmwa5wTs1UwhLMrQYRBDwXPndej2Dv/rvbqsokJYlymubsNtpakVfjI+hd0bG3U6tiuVunDYoLtA==",
+      "license": "LGPL-2.1-or-later",
+      "dependencies": {
+        "denque": "^2.1.0",
+        "iconv-lite": "^0.7.2",
+        "lru-cache": "^10.4.3"
+      },
+      "engines": {
+        "node": ">= 18"
+      },
+      "peerDependencies": {
+        "@types/geojson": ">=7946.0.0",
+        "@types/node": ">=18"
+      },
+      "peerDependenciesMeta": {
+        "@types/geojson": {
+          "optional": true
+        },
+        "@types/node": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/math-intrinsics": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz",
+      "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/media-typer": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-1.1.0.tgz",
+      "integrity": "sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/merge-descriptors": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-2.0.0.tgz",
+      "integrity": "sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/mime-db": {
+      "version": "1.54.0",
+      "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.54.0.tgz",
+      "integrity": "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/mime-types": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-3.0.2.tgz",
+      "integrity": "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-db": "^1.54.0"
+      },
+      "engines": {
+        "node": ">=18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/ms": {
+      "version": "2.1.3",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
+      "license": "MIT"
+    },
+    "node_modules/multer": {
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/multer/-/multer-2.1.1.tgz",
+      "integrity": "sha512-mo+QTzKlx8R7E5ylSXxWzGoXoZbOsRMpyitcht8By2KHvMbf3tjwosZ/Mu/XYU6UuJ3VZnODIrak5ZrPiPyB6A==",
+      "license": "MIT",
+      "dependencies": {
+        "append-field": "^1.0.0",
+        "busboy": "^1.6.0",
+        "concat-stream": "^2.0.0",
+        "type-is": "^1.6.18"
+      },
+      "engines": {
+        "node": ">= 10.16.0"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/multer/node_modules/media-typer": {
+      "version": "0.3.0",
+      "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-0.3.0.tgz",
+      "integrity": "sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/multer/node_modules/mime-db": {
+      "version": "1.52.0",
+      "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.52.0.tgz",
+      "integrity": "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/multer/node_modules/mime-types": {
+      "version": "2.1.35",
+      "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.35.tgz",
+      "integrity": "sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-db": "1.52.0"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/multer/node_modules/type-is": {
+      "version": "1.6.18",
+      "resolved": "https://registry.npmjs.org/type-is/-/type-is-1.6.18.tgz",
+      "integrity": "sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g==",
+      "license": "MIT",
+      "dependencies": {
+        "media-typer": "0.3.0",
+        "mime-types": "~2.1.24"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/negotiator": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-1.0.0.tgz",
+      "integrity": "sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/object-assign": {
+      "version": "4.1.1",
+      "resolved": "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz",
+      "integrity": "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.10.0"
+      }
+    },
+    "node_modules/object-inspect": {
+      "version": "1.13.4",
+      "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.4.tgz",
+      "integrity": "sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/on-finished": {
+      "version": "2.4.1",
+      "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.4.1.tgz",
+      "integrity": "sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==",
+      "license": "MIT",
+      "dependencies": {
+        "ee-first": "1.1.1"
+      },
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/once": {
+      "version": "1.4.0",
+      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
+      "integrity": "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==",
+      "license": "ISC",
+      "dependencies": {
+        "wrappy": "1"
+      }
+    },
+    "node_modules/parseurl": {
+      "version": "1.3.3",
+      "resolved": "https://registry.npmjs.org/parseurl/-/parseurl-1.3.3.tgz",
+      "integrity": "sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/path-to-regexp": {
+      "version": "8.3.0",
+      "resolved": "https://registry.npmjs.org/path-to-regexp/-/path-to-regexp-8.3.0.tgz",
+      "integrity": "sha512-7jdwVIRtsP8MYpdXSwOS0YdD0Du+qOoF/AEPIt88PcCFrZCzx41oxku1jD88hZBwbNUIEfpqvuhjFaMAqMTWnA==",
+      "license": "MIT",
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/proxy-addr": {
+      "version": "2.0.7",
+      "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.7.tgz",
+      "integrity": "sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==",
+      "license": "MIT",
+      "dependencies": {
+        "forwarded": "0.2.0",
+        "ipaddr.js": "1.9.1"
+      },
+      "engines": {
+        "node": ">= 0.10"
+      }
+    },
+    "node_modules/qs": {
+      "version": "6.15.0",
+      "resolved": "https://registry.npmjs.org/qs/-/qs-6.15.0.tgz",
+      "integrity": "sha512-mAZTtNCeetKMH+pSjrb76NAM8V9a05I9aBZOHztWy/UqcJdQYNsf59vrRKWnojAT9Y+GbIvoTBC++CPHqpDBhQ==",
+      "license": "BSD-3-Clause",
+      "dependencies": {
+        "side-channel": "^1.1.0"
+      },
+      "engines": {
+        "node": ">=0.6"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/range-parser": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/range-parser/-/range-parser-1.2.1.tgz",
+      "integrity": "sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/raw-body": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/raw-body/-/raw-body-3.0.2.tgz",
+      "integrity": "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==",
+      "license": "MIT",
+      "dependencies": {
+        "bytes": "~3.1.2",
+        "http-errors": "~2.0.1",
+        "iconv-lite": "~0.7.0",
+        "unpipe": "~1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.10"
+      }
+    },
+    "node_modules/readable-stream": {
+      "version": "3.6.2",
+      "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-3.6.2.tgz",
+      "integrity": "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==",
+      "license": "MIT",
+      "dependencies": {
+        "inherits": "^2.0.3",
+        "string_decoder": "^1.1.1",
+        "util-deprecate": "^1.0.1"
+      },
+      "engines": {
+        "node": ">= 6"
+      }
+    },
+    "node_modules/router": {
+      "version": "2.2.0",
+      "resolved": "https://registry.npmjs.org/router/-/router-2.2.0.tgz",
+      "integrity": "sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==",
+      "license": "MIT",
+      "dependencies": {
+        "debug": "^4.4.0",
+        "depd": "^2.0.0",
+        "is-promise": "^4.0.0",
+        "parseurl": "^1.3.3",
+        "path-to-regexp": "^8.0.0"
+      },
+      "engines": {
+        "node": ">= 18"
+      }
+    },
+    "node_modules/safe-buffer": {
+      "version": "5.2.1",
+      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz",
+      "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==",
+      "funding": [
+        {
+          "type": "github",
+          "url": "https://github.com/sponsors/feross"
+        },
+        {
+          "type": "patreon",
+          "url": "https://www.patreon.com/feross"
+        },
+        {
+          "type": "consulting",
+          "url": "https://feross.org/support"
+        }
+      ],
+      "license": "MIT"
+    },
+    "node_modules/safer-buffer": {
+      "version": "2.1.2",
+      "resolved": "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz",
+      "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+      "license": "MIT"
+    },
+    "node_modules/semver": {
+      "version": "7.7.4",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz",
+      "integrity": "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==",
+      "license": "ISC",
+      "bin": {
+        "semver": "bin/semver.js"
+      },
+      "engines": {
+        "node": ">=10"
+      }
+    },
+    "node_modules/send": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/send/-/send-1.2.1.tgz",
+      "integrity": "sha512-1gnZf7DFcoIcajTjTwjwuDjzuz4PPcY2StKPlsGAQ1+YH20IRVrBaXSWmdjowTJ6u8Rc01PoYOGHXfP1mYcZNQ==",
+      "license": "MIT",
+      "dependencies": {
+        "debug": "^4.4.3",
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "etag": "^1.8.1",
+        "fresh": "^2.0.0",
+        "http-errors": "^2.0.1",
+        "mime-types": "^3.0.2",
+        "ms": "^2.1.3",
+        "on-finished": "^2.4.1",
+        "range-parser": "^1.2.1",
+        "statuses": "^2.0.2"
+      },
+      "engines": {
+        "node": ">= 18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/serve-static": {
+      "version": "2.2.1",
+      "resolved": "https://registry.npmjs.org/serve-static/-/serve-static-2.2.1.tgz",
+      "integrity": "sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==",
+      "license": "MIT",
+      "dependencies": {
+        "encodeurl": "^2.0.0",
+        "escape-html": "^1.0.3",
+        "parseurl": "^1.3.3",
+        "send": "^1.2.0"
+      },
+      "engines": {
+        "node": ">= 18"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/setprototypeof": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
+      "integrity": "sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==",
+      "license": "ISC"
+    },
+    "node_modules/side-channel": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/side-channel/-/side-channel-1.1.0.tgz",
+      "integrity": "sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "object-inspect": "^1.13.3",
+        "side-channel-list": "^1.0.0",
+        "side-channel-map": "^1.0.1",
+        "side-channel-weakmap": "^1.0.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/side-channel-list": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.0.tgz",
+      "integrity": "sha512-FCLHtRD/gnpCiCHEiJLOwdmFP+wzCmDEkc9y7NsYxeF4u7Btsn1ZuwgwJGxImImHicJArLP4R0yX4c2KCrMrTA==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "object-inspect": "^1.13.3"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/side-channel-map": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/side-channel-map/-/side-channel-map-1.0.1.tgz",
+      "integrity": "sha512-VCjCNfgMsby3tTdo02nbjtM/ewra6jPHmpThenkTYh8pG9ucZ/1P8So4u4FGBek/BjpOVsDCMoLA/iuBKIFXRA==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bound": "^1.0.2",
+        "es-errors": "^1.3.0",
+        "get-intrinsic": "^1.2.5",
+        "object-inspect": "^1.13.3"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/side-channel-weakmap": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/side-channel-weakmap/-/side-channel-weakmap-1.0.2.tgz",
+      "integrity": "sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bound": "^1.0.2",
+        "es-errors": "^1.3.0",
+        "get-intrinsic": "^1.2.5",
+        "object-inspect": "^1.13.3",
+        "side-channel-map": "^1.0.1"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/statuses": {
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+      "integrity": "sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/streamsearch": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/streamsearch/-/streamsearch-1.1.0.tgz",
+      "integrity": "sha512-Mcc5wHehp9aXz1ax6bZUyY5afg9u2rv5cqQI3mRrYkGC8rW2hM02jWuwjtL++LS5qinSyhj2QfLyNsuc+VsExg==",
+      "engines": {
+        "node": ">=10.0.0"
+      }
+    },
+    "node_modules/string_decoder": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.3.0.tgz",
+      "integrity": "sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==",
+      "license": "MIT",
+      "dependencies": {
+        "safe-buffer": "~5.2.0"
+      }
+    },
+    "node_modules/toidentifier": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/toidentifier/-/toidentifier-1.0.1.tgz",
+      "integrity": "sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.6"
+      }
+    },
+    "node_modules/type-is": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/type-is/-/type-is-2.0.1.tgz",
+      "integrity": "sha512-OZs6gsjF4vMp32qrCbiVSkrFmXtG/AZhY3t0iAMrMBiAZyV9oALtXO8hsrHbMXF9x6L3grlFuwW2oAz7cav+Gw==",
+      "license": "MIT",
+      "dependencies": {
+        "content-type": "^1.0.5",
+        "media-typer": "^1.1.0",
+        "mime-types": "^3.0.0"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/typedarray": {
+      "version": "0.0.6",
+      "resolved": "https://registry.npmjs.org/typedarray/-/typedarray-0.0.6.tgz",
+      "integrity": "sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==",
+      "license": "MIT"
+    },
+    "node_modules/unpipe": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz",
+      "integrity": "sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/util-deprecate": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz",
+      "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==",
+      "license": "MIT"
+    },
+    "node_modules/vary": {
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz",
+      "integrity": "sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/wrappy": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
+      "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
+      "license": "ISC"
+    }
+  }
+}
+
+
+========================================================================================================================
+FILE: backend/routes/admin/admin.routes.js
+------------------------------------------------------------------------------------------------------------------------
+import express from 'express';
+import { verifyToken, isAdmin } from '../../middleware/authMiddleware.js';
+import {
+    verifyJob,
+    getAllJobs,
+    getUsers,
+    getUserById,
+    updateUserStatus,
+    deleteUser,
+    deleteJobAsAdmin,
+    unverifyJob,
+    getAdminStats,
+    getAllEmployers,
+    getAllSeekers
+} from '../../controllers/adminControllers.js';
+
+const router = express.Router();
+
+router.use(verifyToken);
+router.use(isAdmin);
+
+router.get('/stats', getAdminStats);
+router.get('/employers', getAllEmployers);
+router.get('/seekers', getAllSeekers);
+
+router.get('/users', getUsers);
+router.get('/users/:user_id', getUserById);
+router.patch('/users/:user_id/status', updateUserStatus);
+router.delete('/users/:user_id', deleteUser);
+
+router.delete('/jobs/:job_id', deleteJobAsAdmin);
+router.patch('/verify-job/:job_id', verifyJob);
+router.patch('/unverify-job/:job_id', unverifyJob);
+router.get('/all-jobs', getAllJobs);
+
+export default router;
+
+
+========================================================================================================================
+FILE: backend/routes/auth/auth.routes.js
+------------------------------------------------------------------------------------------------------------------------
+import express from 'express';
+import { register, login, getMe } from '../../controllers/authControllers.js';
+import { downloadCandidateResume } from '../../controllers/employerControllers.js';
+import { verifyToken } from '../../middleware/authMiddleware.js';
+
+const router = express.Router();
+
+router.post('/register', register);
+router.post('/login', login);
+router.get('/me', verifyToken, getMe);
+router.get('/resume-download/:application_id', verifyToken, downloadCandidateResume);
+
+export default router;
+
+
+========================================================================================================================
+FILE: backend/routes/employer/employer.routes.js
+------------------------------------------------------------------------------------------------------------------------
+import express from 'express';
+import { verifyToken, isEmployer } from '../../middleware/authMiddleware.js';
+import {
+    createJob,
+    getEmployerJobs,
+    updateJob,
+    updateJobStatus,
+    getJobApplicants,
+    updateApplicationStatus,
+    deleteMyJob,
+    getEmployerProfile,
+    updateEmployerProfile,
+    getEmployerStats
+} from '../../controllers/employerControllers.js';
+
+const router = express.Router();
+
+router.use(verifyToken);
+router.use(isEmployer);
+
+router.get('/stats', getEmployerStats);
+
+router.post('/post', createJob);
+router.get('/my-jobs', getEmployerJobs);
+router.put('/update/:job_id', updateJob);
+router.patch('/status/:job_id', updateJobStatus);
+router.delete('/delete-jobs/:job_id', deleteMyJob);
+
+router.get('/applicants/:job_id', getJobApplicants);
+router.patch('/application-status/:application_id', updateApplicationStatus);
+
+router.get('/profile', getEmployerProfile);
+router.put('/profile', updateEmployerProfile);
+
+export default router;
+
+
+========================================================================================================================
+FILE: backend/routes/public/public.routes.js
+------------------------------------------------------------------------------------------------------------------------
+import express from 'express';
+import {
+    getPublicJobs,
+    getJobById,
+    getSkillsList,
+    getLandingJobs
+} from '../../controllers/publicControllers.js';
+
+const router = express.Router();
+
+router.get('/jobs', getPublicJobs);
+router.get('/jobs/:job_id', getJobById);
+router.get('/skills', getSkillsList);
+router.get('/landing-jobs', getLandingJobs);
+
+export default router;
+
+
+========================================================================================================================
+FILE: backend/routes/seeker/seeker.routes.js
+------------------------------------------------------------------------------------------------------------------------
+import express from 'express';
+import { verifyToken, isSeeker } from '../../middleware/authMiddleware.js';
+import { upload } from '../../middleware/uploadMiddleware.js';
+import {
+    applyForJob,
+    getSeekerApplications,
+    revokeApplication,
+    getSeekerProfile,
+    updateSeekerProfile,
+    updateResume,
+    downloadMyResume,
+    updateSkills,
+    saveJob,
+    getSavedJobs,
+    removeSavedJob,
+    getSeekerStats,
+    getJobSkillMatch,
+    getEmployerDetails
+} from '../../controllers/seekerControllers.js';
+
+const router = express.Router();
+
+router.use(verifyToken);
+router.use(isSeeker);
+
+router.get('/stats', getSeekerStats);
+router.get('/job-match/:job_id', getJobSkillMatch);
+
+router.post('/apply/:job_id', applyForJob);
+router.get('/my-applications', getSeekerApplications);
+router.delete('/revoke/:application_id', revokeApplication);
+
+router.get('/profile', getSeekerProfile);
+router.put('/profile', updateSeekerProfile);
+router.get('/profile/resume/download', downloadMyResume);
+router.put('/profile/resume', upload.single('resume'), updateResume);
+router.put('/skills', updateSkills);
+
+router.post('/saved-jobs/:job_id', saveJob);
+router.get('/saved-jobs', getSavedJobs);
+router.delete('/saved-jobs/:job_id', removeSavedJob);
+router.get('/jobs/employer/:job_id', getEmployerDetails);
+
+
+export default router;
+
+
+========================================================================================================================
+FILE: backend/scripts/reset-seed.js
+------------------------------------------------------------------------------------------------------------------------
+import pool from '../config/db.js';
+
+const TABLES_IN_ORDER = [
+    'SavedJobs',
+    'Applications',
+    'JobSkills',
+    'SeekerSkills',
+    'Jobs',
+    'Skills',
+    'AdminLogs',
+    'JobSeekers',
+    'Employers',
+    'Users'
+];
+
+async function resetDatabase() {
+    let conn;
+
+    try {
+        conn = await pool.getConnection();
+        await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+
+        for (const tableName of TABLES_IN_ORDER) {
+            try {
+                await conn.query(`TRUNCATE TABLE ${tableName}`);
+                console.log(`Truncated ${tableName}`);
+            } catch (error) {
+                if (error.code === 'ER_NO_SUCH_TABLE') {
+                    console.log(`Skipped ${tableName} (table not found)`);
+                    continue;
+                }
+                throw error;
+            }
+        }
+
+        await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+        console.log('Database reset complete.');
+    } finally {
+        if (conn) conn.release();
+        await pool.end();
+    }
+}
+
+resetDatabase().catch(async (error) => {
+    console.error('Reset failed:', error.message);
+    try {
+        await pool.query('SET FOREIGN_KEY_CHECKS = 1');
+    } catch {
+        // no-op
+    }
+    await pool.end();
+    process.exit(1);
+});
+
+
+========================================================================================================================
+FILE: backend/scripts/seed.js
+------------------------------------------------------------------------------------------------------------------------
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const BASE_URL = process.env.SEED_BASE_URL || 'http://localhost:5000';
+const ADMIN_SECRET = process.env.SEED_ADMIN_SECRET || process.env.ADMIN_SECRET || '';
+
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@12345';
+const EMPLOYER_PASSWORD = process.env.SEED_EMPLOYER_PASSWORD || 'Employer@12345';
+const SEEKER_PASSWORD = process.env.SEED_SEEKER_PASSWORD || 'Seeker@12345';
+
+const RUN_ID = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+const DEFAULT_EMPLOYER_PROFILES = [
+    {
+        company_name: 'Northstar Labs',
+        industry: 'SaaS',
+        company_size: '51-200',
+        company_location: 'Remote',
+        company_website: 'https://northstar-labs.example.com',
+        company_phone: '5551000001'
+    },
+    {
+        company_name: 'Bluefin Retail Tech',
+        industry: 'E-commerce',
+        company_size: '201-500',
+        company_location: 'Austin',
+        company_website: 'https://bluefin-retail.example.com',
+        company_phone: '5551000002'
+    },
+    {
+        company_name: 'CloudHarbor Systems',
+        industry: 'Cloud Infrastructure',
+        company_size: '11-50',
+        company_location: 'New York',
+        company_website: 'https://cloudharbor.example.com',
+        company_phone: '5551000003'
+    }
+];
+
+const DEFAULT_JOB_TEMPLATES = [
+    {
+        title: 'Backend Engineer',
+        description: 'Build API features, optimize SQL queries, and maintain reliable production services.',
+        location: 'Remote',
+        job_type: 'full_time',
+        salary_min: 70000,
+        salary_max: 95000,
+        skills: ['node.js', 'express', 'sql', 'mariadb', 'docker'],
+        required_experience: 3
+    },
+    {
+        title: 'Frontend Engineer',
+        description: 'Implement performant UI flows and collaborate with product/design teams on customer features.',
+        location: 'San Francisco',
+        job_type: 'full_time',
+        salary_min: 68000,
+        salary_max: 92000,
+        skills: ['react', 'typescript', 'javascript', 'testing'],
+        required_experience: 2
+    },
+    {
+        title: 'Junior QA Analyst',
+        description: 'Write and execute test plans, report defects, and support release quality checks.',
+        location: 'Chicago',
+        job_type: 'part_time',
+        salary_min: 32000,
+        salary_max: 48000,
+        skills: ['testing', 'javascript', 'git'],
+        required_experience: 1
+    },
+    {
+        title: 'Cloud Platform Intern',
+        description: 'Support internal tooling and monitoring dashboards for platform reliability projects.',
+        location: 'Austin',
+        job_type: 'internship',
+        salary_min: 20000,
+        salary_max: 28000,
+        skills: ['python', 'aws', 'git'],
+        required_experience: 0
+    }
+];
+
+const DEFAULT_SEEKER_PROFILES = [
+    {
+        full_name: 'Arjun Patel',
+        education: "Bachelor's",
+        experience_years: 4,
+        phone_number: '7771000001',
+        skills: ['node.js', 'express', 'sql', 'docker', 'git']
+    },
+    {
+        full_name: 'Maya Thompson',
+        education: "Master's",
+        experience_years: 3,
+        phone_number: '7771000002',
+        skills: ['react', 'typescript', 'javascript', 'testing']
+    },
+    {
+        full_name: 'Ethan Brooks',
+        education: "Bachelor's",
+        experience_years: 1,
+        phone_number: '7771000003',
+        skills: ['testing', 'javascript', 'git']
+    },
+    {
+        full_name: 'Noah Reed',
+        education: 'Diploma',
+        experience_years: 0,
+        phone_number: '7771000004',
+        skills: ['python', 'aws', 'git']
+    },
+    {
+        full_name: 'Sofia Lin',
+        education: "Master's",
+        experience_years: 5,
+        phone_number: '7771000005',
+        skills: ['node.js', 'sql', 'mariadb', 'aws', 'docker']
+    },
+    {
+        full_name: 'Daniel Cruz',
+        education: "Bachelor's",
+        experience_years: 2,
+        phone_number: '7771000006',
+        skills: ['react', 'javascript', 'git', 'testing']
+    }
+];
+
+function readPositiveInt(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
+    return parsed;
+}
+
+const EMPLOYER_COUNT = readPositiveInt(process.env.SEED_EMPLOYERS, DEFAULT_EMPLOYER_PROFILES.length);
+const SEEKER_COUNT = readPositiveInt(process.env.SEED_SEEKERS, DEFAULT_SEEKER_PROFILES.length);
+const JOBS_PER_EMPLOYER = readPositiveInt(process.env.SEED_JOBS_PER_EMPLOYER, 2);
+const APPS_PER_SEEKER = readPositiveInt(process.env.SEED_APPS_PER_SEEKER, 2);
+
+const summary = {
+    users: { admins: 0, employers: 0, seekers: 0 },
+    jobs: { created: 0, verified: 0 },
+    resumesUploaded: 0,
+    skillsUpdated: 0,
+    savedJobs: 0,
+    applications: {
+        submitted: 0,
+        statusUpdated: 0,
+        hired: 0,
+        shortlisted: 0,
+        rejected: 0
+    }
+};
+
+const hiredByJob = new Map();
+
+const ensureNumber = (value) => Number(value ?? 0);
+const unwrapData = (payload) => payload?.data ?? payload;
+
+function getToken(payload) {
+    const data = unwrapData(payload);
+    return data?.token;
+}
+
+function getUserId(payload) {
+    const data = unwrapData(payload);
+    return ensureNumber(data?.user_id);
+}
+
+function getSeedItem(items, index) {
+    return items[index % items.length];
+}
+
+function normalizeSkillName(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function uniqueSkills(values) {
+    return [...new Set(values.map(normalizeSkillName).filter(Boolean))];
+}
+
+function getProficiency(experienceYears, order) {
+    if (experienceYears >= 5 && order < 2) return 'advanced';
+    if (experienceYears >= 2) return order === 0 ? 'advanced' : 'intermediate';
+    return order === 0 ? 'intermediate' : 'beginner';
+}
+
+async function api(path, { method = 'GET', token, json, formData, expected = [200] } = {}) {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    let body;
+    if (json !== undefined) {
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(json);
+    } else if (formData) {
+        body = formData;
+    }
+
+    const res = await fetch(`${BASE_URL}${path}`, { method, headers, body });
+
+    let payload;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        payload = await res.json();
+    } else {
+        payload = { message: await res.text() };
+    }
+
+    if (!expected.includes(res.status)) {
+        throw new Error(`${method} ${path} failed (${res.status}): ${JSON.stringify(payload)}`);
+    }
+
+    return { status: res.status, payload };
+}
+
+function makePdfBlob() {
+    const minimalPdf = `%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 44 >>\nstream\nBT /F1 12 Tf 50 100 Td (Seed Resume) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000010 00000 n \n0000000060 00000 n \n0000000117 00000 n \n0000000207 00000 n \ntrailer\n<< /Root 1 0 R /Size 5 >>\nstartxref\n300\n%%EOF`;
+    return new Blob([minimalPdf], { type: 'application/pdf' });
+}
+
+function buildEmployerProfile(index) {
+    const base = getSeedItem(DEFAULT_EMPLOYER_PROFILES, index);
+    const cycle = Math.floor(index / DEFAULT_EMPLOYER_PROFILES.length);
+    const suffix = cycle > 0 ? ` ${cycle + 1}` : '';
+
+    return {
+        company_name: `${base.company_name}${suffix}`,
+        industry: base.industry,
+        company_size: base.company_size,
+        company_location: base.company_location,
+        company_website: base.company_website,
+        company_phone: `${base.company_phone.slice(0, 7)}${String(index + 1).padStart(3, '0')}`
+    };
+}
+
+function buildSeekerProfile(index) {
+    const base = getSeedItem(DEFAULT_SEEKER_PROFILES, index);
+    const cycle = Math.floor(index / DEFAULT_SEEKER_PROFILES.length);
+    const suffix = cycle > 0 ? ` ${cycle + 1}` : '';
+
+    return {
+        full_name: `${base.full_name}${suffix}`,
+        education: base.education,
+        experience_years: base.experience_years,
+        phone_number: `${base.phone_number.slice(0, 7)}${String(index + 1).padStart(3, '0')}`,
+        skills: uniqueSkills(base.skills)
+    };
+}
+
+async function registerAndLoginAdmin() {
+    const email = `admin.seed.${RUN_ID}@example.com`;
+
+    await api('/api/auth/register', {
+        method: 'POST',
+        json: {
+            email,
+            password: ADMIN_PASSWORD,
+            role: 'admin',
+            secretKey: ADMIN_SECRET
+        },
+        expected: [201]
+    });
+
+    const login = await api('/api/auth/login', {
+        method: 'POST',
+        json: { email, password: ADMIN_PASSWORD },
+        expected: [200]
+    });
+
+    summary.users.admins += 1;
+    const token = getToken(login.payload);
+    if (!token) throw new Error('Admin login did not return token.');
+    return { token, email };
+}
+
+async function registerAndLoginEmployer(index) {
+    const profile = buildEmployerProfile(index);
+    const email = `employer${index}.seed.${RUN_ID}@example.com`;
+
+    await api('/api/auth/register', {
+        method: 'POST',
+        json: {
+            email,
+            password: EMPLOYER_PASSWORD,
+            role: 'employer',
+            company_name: profile.company_name,
+            industry: profile.industry,
+            company_size: profile.company_size,
+            company_location: profile.company_location,
+            company_website: profile.company_website,
+            company_phone: profile.company_phone
+        },
+        expected: [201]
+    });
+
+    const login = await api('/api/auth/login', {
+        method: 'POST',
+        json: { email, password: EMPLOYER_PASSWORD },
+        expected: [200]
+    });
+
+    summary.users.employers += 1;
+    const token = getToken(login.payload);
+    if (!token) throw new Error('Employer login did not return token.');
+    return { token, userId: getUserId(login.payload), email, index, profile };
+}
+
+async function registerAndLoginSeeker(index) {
+    const profile = buildSeekerProfile(index);
+    const email = `seeker${index}.seed.${RUN_ID}@example.com`;
+
+    await api('/api/auth/register', {
+        method: 'POST',
+        json: {
+            email,
+            password: SEEKER_PASSWORD,
+            role: 'jobseeker',
+            full_name: profile.full_name,
+            education: profile.education,
+            experience_years: profile.experience_years,
+            phone_number: profile.phone_number
+        },
+        expected: [201]
+    });
+
+    const login = await api('/api/auth/login', {
+        method: 'POST',
+        json: { email, password: SEEKER_PASSWORD },
+        expected: [200]
+    });
+
+    summary.users.seekers += 1;
+    const token = getToken(login.payload);
+    if (!token) throw new Error('Seeker login did not return token.');
+    return { token, userId: getUserId(login.payload), email, profile };
+}
+
+async function createJobsForEmployer(employer, adminToken) {
+    const jobs = [];
+    const perEmployerCount = Math.min(JOBS_PER_EMPLOYER, DEFAULT_JOB_TEMPLATES.length);
+
+    for (let i = 0; i < perEmployerCount; i += 1) {
+        const template = getSeedItem(DEFAULT_JOB_TEMPLATES, employer.index + i);
+        const title = `${template.title} - ${employer.profile.company_name}`;
+
+        const created = await api('/api/employer/post', {
+            method: 'POST',
+            token: employer.token,
+            json: {
+                title,
+                description: template.description,
+                location: template.location,
+                job_type: template.job_type,
+                salary_min: template.salary_min,
+                salary_max: template.salary_max,
+                skills: uniqueSkills(template.skills)
+            },
+            expected: [201]
+        });
+
+        const jobId = ensureNumber(created.payload.job_id || created.payload.data?.job_id);
+        if (!jobId) throw new Error('Job creation response did not include a job_id.');
+
+        summary.jobs.created += 1;
+
+        await api(`/api/admin/verify-job/${jobId}`, {
+            method: 'PATCH',
+            token: adminToken,
+            expected: [200]
+        });
+
+        summary.jobs.verified += 1;
+        jobs.push({
+            jobId,
+            employerToken: employer.token,
+            title,
+            skills: uniqueSkills(template.skills),
+            requiredExperience: template.required_experience
+        });
+    }
+
+    return jobs;
+}
+
+async function uploadSeekerResume(seeker) {
+    const form = new FormData();
+    form.append('resume', makePdfBlob(), `seed-resume-${seeker.userId}.pdf`);
+
+    await api('/api/seeker/profile/resume', {
+        method: 'PUT',
+        token: seeker.token,
+        formData: form,
+        expected: [200]
+    });
+
+    summary.resumesUploaded += 1;
+}
+
+async function updateSeekerSkills(seeker) {
+    const chosen = seeker.profile.skills;
+
+    await api('/api/seeker/skills', {
+        method: 'PUT',
+        token: seeker.token,
+        json: {
+            skills: chosen.map((name, order) => ({
+                name,
+                proficiency: getProficiency(seeker.profile.experience_years, order)
+            }))
+        },
+        expected: [200]
+    });
+
+    summary.skillsUpdated += 1;
+}
+
+function rankJobsForSeeker(seeker, availableJobs) {
+    const seekerSkillSet = new Set(uniqueSkills(seeker.profile.skills));
+
+    const scored = availableJobs.map((job) => {
+        const overlap = job.skills.filter((skill) => seekerSkillSet.has(skill)).length;
+        const matchRatio = job.skills.length ? overlap / job.skills.length : 0;
+        const experienceDelta = seeker.profile.experience_years - job.requiredExperience;
+        const weightedScore = Number((matchRatio * 0.85 + Math.max(-0.2, Math.min(0.2, experienceDelta * 0.05))).toFixed(4));
+
+        return {
+            ...job,
+            overlap,
+            matchRatio,
+            weightedScore
+        };
+    });
+
+    scored.sort((a, b) => b.weightedScore - a.weightedScore);
+    return scored;
+}
+
+function pickApplicationStatus(seeker, rankedJob, seekerAlreadyHired) {
+    const jobAlreadyHasHire = hiredByJob.get(rankedJob.jobId) === true;
+    const isHighMatch = rankedJob.matchRatio >= 0.8;
+    const isGoodMatch = rankedJob.matchRatio >= 0.5;
+    const hasRequiredExperience = seeker.profile.experience_years >= rankedJob.requiredExperience;
+
+    if (!jobAlreadyHasHire && !seekerAlreadyHired && isHighMatch && hasRequiredExperience) {
+        hiredByJob.set(rankedJob.jobId, true);
+        summary.applications.hired += 1;
+        return 'hired';
+    }
+    if (isGoodMatch) {
+        summary.applications.shortlisted += 1;
+        return 'shortlisted';
+    }
+
+    summary.applications.rejected += 1;
+    return 'rejected';
+}
+
+async function seekerSavesAndApplies(seeker, availableJobs) {
+    const rankedJobs = rankJobsForSeeker(seeker, availableJobs);
+    const saveLimit = Math.min(APPS_PER_SEEKER + 1, rankedJobs.length);
+    const applyLimit = Math.min(APPS_PER_SEEKER, rankedJobs.length);
+
+    for (const target of rankedJobs.slice(0, saveLimit)) {
+        const saved = await api(`/api/seeker/saved-jobs/${target.jobId}`, {
+            method: 'POST',
+            token: seeker.token,
+            expected: [201, 409]
+        });
+        if (saved.status === 201) summary.savedJobs += 1;
+    }
+
+    const applyTargets = rankedJobs
+        .filter((job) => job.overlap > 0)
+        .slice(0, applyLimit);
+
+    let seekerAlreadyHired = false;
+
+    for (const target of applyTargets) {
+
+        const applied = await api(`/api/seeker/apply/${target.jobId}`, {
+            method: 'POST',
+            token: seeker.token,
+            expected: [201, 409]
+        });
+
+        if (applied.status === 201) {
+            summary.applications.submitted += 1;
+            const appId = ensureNumber(applied.payload.data?.application_id);
+            if (appId) {
+                const status = pickApplicationStatus(seeker, target, seekerAlreadyHired);
+                await api(`/api/employer/application-status/${appId}`, {
+                    method: 'PATCH',
+                    token: target.employerToken,
+                    json: { status },
+                    expected: [200]
+                });
+
+                if (status === 'hired') seekerAlreadyHired = true;
+                summary.applications.statusUpdated += 1;
+            }
+        }
+    }
+}
+
+async function runSeed() {
+    if (!globalThis.fetch || !globalThis.FormData || !globalThis.Blob) {
+        throw new Error('Node runtime must provide fetch/FormData/Blob. Use Node 18+ to run the seed script.');
+    }
+
+    if (!ADMIN_SECRET) {
+        throw new Error('Missing admin secret. Set ADMIN_SECRET (or SEED_ADMIN_SECRET) in backend/.env.');
+    }
+
+    console.log(`Seeding against ${BASE_URL}`);
+    console.log(`Run ID: ${RUN_ID}`);
+
+    const admin = await registerAndLoginAdmin();
+
+    const employers = [];
+    for (let i = 0; i < EMPLOYER_COUNT; i += 1) {
+        employers.push(await registerAndLoginEmployer(i));
+    }
+
+    const seekers = [];
+    for (let i = 0; i < SEEKER_COUNT; i += 1) {
+        seekers.push(await registerAndLoginSeeker(i));
+    }
+
+    const jobs = [];
+    for (const employer of employers) {
+        const created = await createJobsForEmployer(employer, admin.token);
+        jobs.push(...created);
+    }
+
+    for (let i = 0; i < seekers.length; i += 1) {
+        const seeker = seekers[i];
+        await uploadSeekerResume(seeker);
+        await updateSeekerSkills(seeker);
+        if (jobs.length) {
+            await seekerSavesAndApplies(seeker, jobs);
+        }
+
+        if (jobs.length) {
+            await api(`/api/seeker/job-match/${jobs[0].jobId}`, {
+                method: 'GET',
+                token: seeker.token,
+                expected: [200, 404]
+            });
+        }
+
+        await api('/api/seeker/stats', { method: 'GET', token: seeker.token, expected: [200, 404] });
+    }
+
+    await api('/api/admin/stats', { method: 'GET', token: admin.token, expected: [200, 404] });
+
+    for (const employer of employers) {
+        await api('/api/employer/stats', { method: 'GET', token: employer.token, expected: [200, 404] });
+    }
+
+    console.log('Seed completed successfully.');
+    console.table({
+        admin_users: summary.users.admins,
+        employer_users: summary.users.employers,
+        seeker_users: summary.users.seekers,
+        jobs_created: summary.jobs.created,
+        jobs_verified: summary.jobs.verified,
+        resumes_uploaded: summary.resumesUploaded,
+        seeker_skills_updated: summary.skillsUpdated,
+        jobs_saved: summary.savedJobs,
+        applications_submitted: summary.applications.submitted,
+        application_status_updates: summary.applications.statusUpdated,
+        applications_hired: summary.applications.hired,
+        applications_shortlisted: summary.applications.shortlisted,
+        applications_rejected: summary.applications.rejected
+    });
+}
+
+runSeed().catch((error) => {
+    console.error('Seed failed:', error.message);
+    process.exit(1);
+});
+
+
+========================================================================================================================
+FILE: backend/server.js
+------------------------------------------------------------------------------------------------------------------------
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import authRoutes from './routes/auth/auth.routes.js';
+import adminRoutes from './routes/admin/admin.routes.js';
+import seekerRoutes from './routes/seeker/seeker.routes.js';
+import employerRoutes from './routes/employer/employer.routes.js';
+import publicRoutes from './routes/public/public.routes.js';
+
+dotenv.config();
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/seeker', seekerRoutes);
+app.use('/api/employer', employerRoutes);
+app.use('/api/public', publicRoutes);
+
+
+BigInt.prototype.toJSON = function() {       
+  return this.toString(); 
+};
+
+// Global Error Handler (Optional but recommended for Multer)
+app.use((err, req, res, next) => {
+    if (err) {
+        return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} ðŸš€`);
+});
+
+========================================================================================================================
+FILE: backend/services/queries/adminQueries.js
+------------------------------------------------------------------------------------------------------------------------
+export const VERIFY_JOB = `
+    UPDATE Jobs
+    SET is_verified = TRUE, verified_by = ?, verified_at = CURRENT_TIMESTAMP
+    WHERE job_id = ?
+`;
+
+export const ADMIN_ALL_JOBS_BASE_QUERY = `
+    SELECT
+        j.*,
+        e.company_name,
+        (SELECT GROUP_CONCAT(s.skill_name)
+         FROM JobSkills js
+         JOIN Skills s ON js.skill_id = s.skill_id
+         WHERE js.job_id = j.job_id) AS skills_list
+    FROM Jobs j
+    JOIN Employers e ON e.employer_id = j.employer_id
+    WHERE 1=1
+`;
+
+export const ADMIN_ALL_JOBS_SKILLS_FILTER = `
+    AND j.job_id IN (
+        SELECT js.job_id
+        FROM JobSkills js
+        JOIN Skills s ON js.skill_id = s.skill_id
+        WHERE s.skill_name IN (?)
+    )
+`;
+
+export const SELECT_ALL_USERS = `
+    SELECT
+        u.user_id,
+        u.email,
+        u.role,
+        u.is_active,
+        u.created_at,
+        js.full_name,
+        e.company_name
+    FROM Users u
+    LEFT JOIN JobSeekers js ON js.seeker_id = u.user_id
+    LEFT JOIN Employers e ON e.employer_id = u.user_id
+    ORDER BY u.created_at DESC
+`;
+
+export const SELECT_USER_BY_ID = `
+    SELECT
+        u.user_id,
+        u.email,
+        u.role,
+        u.is_active,
+        u.created_at,
+        js.full_name,
+        js.phone_number,
+        js.education,
+        js.experience_years,
+        e.company_name,
+        e.company_phone,
+        e.industry,
+        e.company_size,
+        e.company_location,
+        e.company_website
+    FROM Users u
+    LEFT JOIN JobSeekers js ON js.seeker_id = u.user_id
+    LEFT JOIN Employers e ON e.employer_id = u.user_id
+    WHERE u.user_id = ?
+    LIMIT 1
+`;
+
+export const UPDATE_USER_ACTIVE_STATUS = 'UPDATE Users SET is_active = ? WHERE user_id = ?';
+
+export const DELETE_USER = 'DELETE FROM Users WHERE user_id = ?';
+
+export const DELETE_JOB = 'DELETE FROM Jobs WHERE job_id = ?';
+
+export const UNVERIFY_JOB = `
+    UPDATE Jobs
+    SET is_verified = FALSE, verified_by = NULL, verified_at = NULL
+    WHERE job_id = ?
+`;
+
+export const ADMIN_STATS_QUERY = `
+    SELECT
+        (SELECT COUNT(*) FROM Users WHERE role != 'admin') AS total_users,
+        (SELECT COUNT(*) FROM Users WHERE role = 'employer') AS total_employers,
+        (SELECT COUNT(*) FROM Users WHERE role = 'jobseeker') AS total_seekers,
+        (SELECT COUNT(*) FROM Jobs) AS total_jobs,
+        (SELECT COUNT(*) FROM Jobs WHERE is_verified = TRUE) AS verified_jobs,
+        (SELECT COUNT(*) FROM Jobs WHERE status = 'open') AS open_jobs,
+        (SELECT COUNT(*) FROM Applications) AS total_applications,
+        (SELECT COUNT(*) FROM Applications WHERE status = 'applied') AS applications_applied,
+        (SELECT COUNT(*) FROM Applications WHERE status = 'shortlisted') AS applications_shortlisted,
+        (SELECT COUNT(*) FROM Applications WHERE status = 'rejected') AS applications_rejected,
+        (SELECT COUNT(*) FROM Applications WHERE status = 'hired') AS applications_hired
+`;
+
+export const SELECT_ALL_EMPLOYERS = `
+    SELECT
+        u.user_id,
+        u.email,
+        u.is_active,
+        u.created_at,
+        e.company_name,
+        e.industry,
+        e.company_size,
+        e.company_location,
+        e.company_website,
+        e.company_phone,
+        COUNT(j.job_id) AS total_jobs
+    FROM Users u
+    JOIN Employers e ON e.employer_id = u.user_id
+    LEFT JOIN Jobs j ON j.employer_id = u.user_id
+    GROUP BY u.user_id
+    ORDER BY u.created_at DESC
+`;
+
+export const SELECT_ALL_SEEKERS = `
+    SELECT
+        u.user_id,
+        u.email,
+        u.is_active,
+        u.created_at,
+        js.full_name,
+        js.phone_number,
+        js.education,
+        js.experience_years,
+        COUNT(a.application_id) AS total_applications
+    FROM Users u
+    JOIN JobSeekers js ON js.seeker_id = u.user_id
+    LEFT JOIN Applications a ON a.seeker_id = u.user_id
+    GROUP BY u.user_id
+    ORDER BY u.created_at DESC
+`;
+
+
+========================================================================================================================
+FILE: backend/services/queries/authQueries.js
+------------------------------------------------------------------------------------------------------------------------
+export const SELECT_USER_BY_EMAIL = 'SELECT * FROM Users WHERE email = ?';
+
+export const SELECT_USER_ID_BY_EMAIL = 'SELECT user_id FROM Users WHERE email = ?';
+
+export const INSERT_USER = 'INSERT INTO Users (email, password_hash, role) VALUES (?, ?, ?)';
+
+export const INSERT_JOBSEEKER_PROFILE = `
+    INSERT INTO JobSeekers (seeker_id, full_name, education, experience_years, phone_number)
+    VALUES (?, ?, ?, ?, ?)
+`;
+
+export const INSERT_EMPLOYER_PROFILE = `
+    INSERT INTO Employers (employer_id, company_name, industry, company_size, company_location, company_website, company_phone)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+`;
+
+export const SELECT_AUTH_USER_BY_ID = `
+    SELECT user_id, email, role, is_active, created_at
+    FROM Users
+    WHERE user_id = ?
+`;
+
+
+========================================================================================================================
+FILE: backend/services/queries/employerQueries.js
+------------------------------------------------------------------------------------------------------------------------
+export const INSERT_JOB = `
+    INSERT INTO Jobs (employer_id, title, description, location, job_type, salary_min, salary_max)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+`;
+
+export const INSERT_SKILL_IGNORE = 'INSERT IGNORE INTO Skills (skill_name) VALUES (?)';
+
+export const SELECT_SKILL_ID_BY_NAME = 'SELECT skill_id FROM Skills WHERE skill_name = ?';
+
+export const INSERT_JOB_SKILL = 'INSERT INTO JobSkills (job_id, skill_id) VALUES (?, ?)';
+
+export const SELECT_EMPLOYER_JOBS = `
+    SELECT * FROM Jobs WHERE employer_id = ? ORDER BY posted_at DESC
+`;
+
+export const UPDATE_JOB = `
+    UPDATE Jobs
+    SET title = ?, description = ?, location = ?, job_type = ?, salary_min = ?, salary_max = ?
+    WHERE job_id = ? AND employer_id = ?
+`;
+
+export const DELETE_JOB_SKILLS = 'DELETE FROM JobSkills WHERE job_id = ?';
+
+export const UPDATE_JOB_STATUS = `
+    UPDATE Jobs SET status = ? WHERE job_id = ? AND employer_id = ?
+`;
+
+export const JOB_APPLICANTS_BASE_QUERY = `
+    SELECT DISTINCT
+        a.application_id,
+        a.status AS application_status,
+        a.applied_at,
+        s.seeker_id,
+        s.full_name,
+        s.education,
+        s.experience_years,
+        s.resume_path,
+        s.phone_number,
+        (SELECT GROUP_CONCAT(CONCAT(msk.skill_name, ':', sk.proficiency))
+         FROM SeekerSkills sk
+         JOIN Skills msk ON sk.skill_id = msk.skill_id
+         WHERE sk.seeker_id = s.seeker_id) AS seeker_skills
+    FROM Applications a
+    JOIN JobSeekers s ON a.seeker_id = s.seeker_id
+    JOIN Jobs j ON a.job_id = j.job_id
+    LEFT JOIN SeekerSkills f_sk ON s.seeker_id = f_sk.seeker_id
+    LEFT JOIN Skills f_msk ON f_sk.skill_id = f_msk.skill_id
+    WHERE a.job_id = ? AND j.employer_id = ?
+`;
+
+export const UPDATE_APPLICATION_STATUS = `
+    UPDATE Applications a
+    JOIN Jobs j ON a.job_id = j.job_id
+    SET a.status = ?
+    WHERE a.application_id = ? AND j.employer_id = ?
+`;
+
+export const SELECT_JOB_OWNER = 'SELECT employer_id FROM Jobs WHERE job_id = ?';
+
+export const DELETE_JOB = 'DELETE FROM Jobs WHERE job_id = ?';
+
+export const SELECT_EMPLOYER_PROFILE = `
+    SELECT employer_id, company_name, company_phone, industry, company_size, company_location, company_website
+    FROM Employers
+    WHERE employer_id = ?
+    LIMIT 1
+`;
+
+export const EMPLOYER_STATS_QUERY = `
+    SELECT
+        COUNT(DISTINCT j.job_id) AS total_jobs,
+        SUM(j.status = 'open') AS open_jobs,
+        SUM(j.status = 'closed') AS closed_jobs,
+        SUM(j.is_verified = TRUE) AS verified_jobs,
+        COUNT(a.application_id) AS total_applications
+    FROM Jobs j
+    LEFT JOIN Applications a ON a.job_id = j.job_id
+    WHERE j.employer_id = ?
+`;
+
+export const EMPLOYER_APPLICATIONS_BY_STATUS = `
+    SELECT a.status, COUNT(*) AS count
+    FROM Applications a
+    JOIN Jobs j ON a.job_id = j.job_id
+    WHERE j.employer_id = ?
+    GROUP BY a.status
+`;
+
+
+export const SELECT_RESUME_DOWNLOAD_CONTEXT = `
+        SELECT
+                a.application_id,
+                a.seeker_id,
+                j.employer_id,
+                s.resume_path,
+                s.resume_filename
+        FROM Applications a
+        JOIN Jobs j ON j.job_id = a.job_id
+        JOIN JobSeekers s ON s.seeker_id = a.seeker_id
+        WHERE a.application_id = ?
+            AND s.resume_path IS NOT NULL
+        LIMIT 1
+`;
+
+
+========================================================================================================================
+FILE: backend/services/queries/publicQueries.js
+------------------------------------------------------------------------------------------------------------------------
+export const PUBLIC_JOBS_BASE_QUERY = `
+    SELECT
+        j.job_id,
+        j.title,
+        j.location,
+        j.job_type,
+        j.salary_min,
+        j.salary_max,
+        j.posted_at,
+        j.employer_id,
+        e.company_name,
+        (SELECT GROUP_CONCAT(s.skill_name)
+         FROM JobSkills js
+         JOIN Skills s ON js.skill_id = s.skill_id
+         WHERE js.job_id = j.job_id) AS skills_list
+    FROM Jobs j
+    JOIN Employers e ON e.employer_id = j.employer_id
+    WHERE j.status = 'open' AND j.is_verified = TRUE
+`;
+
+export const PUBLIC_JOBS_SKILLS_FILTER = `
+    AND j.job_id IN (
+        SELECT js.job_id
+        FROM JobSkills js
+        JOIN Skills s ON js.skill_id = s.skill_id
+        WHERE s.skill_name IN (?)
+    )
+`;
+
+export const PUBLIC_JOB_BY_ID_QUERY = `
+    SELECT
+        j.job_id,
+        j.employer_id,
+        j.title,
+        j.description,
+        j.location,
+        j.job_type,
+        j.salary_min,
+        j.salary_max,
+        j.status,
+        j.is_verified,
+        j.posted_at,
+        e.company_name,
+        (SELECT GROUP_CONCAT(s.skill_name)
+         FROM JobSkills js
+         JOIN Skills s ON js.skill_id = s.skill_id
+         WHERE js.job_id = j.job_id) AS skills_list
+    FROM Jobs j
+    JOIN Employers e ON e.employer_id = j.employer_id
+    WHERE j.job_id = ? AND j.status = 'open' AND j.is_verified = TRUE
+    LIMIT 1
+`;
+
+export const SKILLS_LIST_BASE_QUERY = 'SELECT skill_id, skill_name FROM Skills';
+
+
+========================================================================================================================
+FILE: backend/services/queries/seekerQueries.js
+------------------------------------------------------------------------------------------------------------------------
+export const SELECT_SEEKER_RESUME = 'SELECT resume_path FROM JobSeekers WHERE seeker_id = ?';
+
+export const INSERT_APPLICATION = `
+    INSERT INTO Applications (job_id, seeker_id, status, applied_at)
+    VALUES (?, ?, 'applied', NOW())
+`;
+
+export const SELECT_SEEKER_APPLICATIONS = `
+    SELECT a.application_id, a.status, a.applied_at, j.title, e.company_name, j.job_id, j.employer_id
+    FROM Applications a
+    JOIN Jobs j ON a.job_id = j.job_id
+    JOIN Employers e ON j.employer_id = e.employer_id
+    WHERE a.seeker_id = ?
+    ORDER BY a.applied_at DESC
+`;
+
+export const DELETE_SEEKER_APPLICATION = `
+    DELETE FROM Applications
+    WHERE application_id = ? AND seeker_id = ?
+`;
+
+export const UPDATE_SEEKER_RESUME = `
+    UPDATE JobSeekers
+    SET resume_path = ?, resume_filename = ?
+    WHERE seeker_id = ?
+`;
+
+export const DELETE_SEEKER_SKILLS = 'DELETE FROM SeekerSkills WHERE seeker_id = ?';
+
+export const INSERT_SKILL_IGNORE = 'INSERT IGNORE INTO Skills (skill_name) VALUES (?)';
+
+export const SELECT_SKILL_ID_BY_NAME = 'SELECT skill_id FROM Skills WHERE skill_name = ?';
+
+export const INSERT_SEEKER_SKILL = `
+    INSERT INTO SeekerSkills (seeker_id, skill_id, proficiency)
+    VALUES (?, ?, ?)
+`;
+
+export const SELECT_SEEKER_PROFILE = `
+    SELECT seeker_id, full_name, phone_number, education, experience_years, resume_path, resume_filename
+    FROM JobSeekers
+    WHERE seeker_id = ?
+    LIMIT 1
+`;
+
+export const SELECT_SEEKER_PROFILE_SKILLS = `
+    SELECT s.skill_name AS name, ss.proficiency
+    FROM SeekerSkills ss
+    JOIN Skills s ON s.skill_id = ss.skill_id
+    WHERE ss.seeker_id = ?
+    ORDER BY s.skill_name ASC
+`;
+
+export const SELECT_SEEKER_RESUME_FILE = `
+    SELECT resume_path, resume_filename
+    FROM JobSeekers
+    WHERE seeker_id = ?
+    LIMIT 1
+`;
+
+export const SELECT_PUBLIC_JOB_EXISTS = `
+    SELECT job_id
+    FROM Jobs
+    WHERE job_id = ? AND status = 'open' AND is_verified = TRUE
+    LIMIT 1
+`;
+
+export const SELECT_JOB_SKILL_NAMES = `
+    SELECT s.skill_name
+    FROM JobSkills js
+    JOIN Skills s ON s.skill_id = js.skill_id
+    WHERE js.job_id = ?
+`;
+
+export const SELECT_SEEKER_SKILL_NAMES = `
+    SELECT s.skill_name
+    FROM SeekerSkills ss
+    JOIN Skills s ON s.skill_id = ss.skill_id
+    WHERE ss.seeker_id = ?
+`;
+
+export const INSERT_SAVED_JOB = 'INSERT INTO SavedJobs (seeker_id, job_id) VALUES (?, ?)';
+
+export const SELECT_SAVED_JOBS = `
+    SELECT
+        j.job_id,
+        j.title,
+        j.location,
+        j.job_type,
+        j.salary_min,
+        j.salary_max,
+        j.status,
+        j.is_verified,
+        j.posted_at,
+        e.company_name,
+        sj.saved_at,
+        (SELECT GROUP_CONCAT(s.skill_name)
+         FROM JobSkills js
+         JOIN Skills s ON s.skill_id = js.skill_id
+         WHERE js.job_id = j.job_id) AS skills_list
+    FROM SavedJobs sj
+    JOIN Jobs j ON j.job_id = sj.job_id
+    JOIN Employers e ON e.employer_id = j.employer_id
+    WHERE sj.seeker_id = ?
+    ORDER BY sj.saved_at DESC
+`;
+
+export const DELETE_SAVED_JOB = 'DELETE FROM SavedJobs WHERE seeker_id = ? AND job_id = ?';
+
+export const SEEKER_STATS_QUERY = `
+    SELECT
+        COUNT(DISTINCT a.application_id) AS total_applications,
+        SUM(a.status = 'applied') AS applied,
+        SUM(a.status = 'shortlisted') AS shortlisted,
+        SUM(a.status = 'rejected') AS rejected,
+        SUM(a.status = 'hired') AS hired,
+        (SELECT COUNT(*) FROM SavedJobs WHERE seeker_id = js.seeker_id) AS saved_jobs,
+        (SELECT COUNT(*) FROM SeekerSkills WHERE seeker_id = js.seeker_id) AS skills_count
+    FROM JobSeekers js
+    LEFT JOIN Applications a ON a.seeker_id = js.seeker_id
+    WHERE js.seeker_id = ?
+    GROUP BY js.seeker_id
+`;
+
+
+========================================================================================================================
+FILE: backend/shared/responses/httpResponse.js
+------------------------------------------------------------------------------------------------------------------------
+export const ok = (res, data = null, message = null, status = 200) => {
+    const payload = { success: true };
+    if (message) payload.message = message;
+    if (data !== null && data !== undefined) payload.data = data;
+    return res.status(status).json(payload);
+};
+
+export const fail = (res, message, status = 400, details = null) => {
+    const payload = { success: false, message };
+    if (details) payload.details = details;
+    return res.status(status).json(payload);
+};
+
+
+========================================================================================================================
+FILE: backend/shared/validators/commonValidators.js
+------------------------------------------------------------------------------------------------------------------------
+export const isBoolean = (value) => typeof value === 'boolean';
+
+export const isNonEmptyString = (value) => (
+    typeof value === 'string' && value.trim().length > 0
+);
+
+export const toPositiveInt = (value) => {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) return null;
+    return parsed;
+};
+
+

@@ -1,55 +1,56 @@
 import jwt from 'jsonwebtoken';
+import pool from '../config/db.js';
+import { SELECT_AUTH_USER_BY_ID } from '../services/queries/authQueries.js';
 
-// 1️⃣ VERIFY JWT TOKEN (The Main Gatekeeper)
-export const verifyToken = (req, res, next) => {
-    // Tokens are typically sent in the header as: "Bearer <token_string>"
+export const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+    if (!authHeader?.startsWith('Bearer ')) {
         return res.status(401).json({ error: "Access denied. No token provided." });
     }
 
-    const token = authHeader.split(' ')[1];
-
+    let decoded;
     try {
-        // Decode the token using your secret key
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
-        // Attach the decoded payload (user_id and role) to the request object
-        req.user = decoded; 
-        
-        next(); // Move to the next function (the controller or role checker)
-    } catch (error) {
+        decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    } catch {
         return res.status(403).json({ error: "Invalid or expired token." });
     }
+
+    try {
+        const rows = await pool.query(SELECT_AUTH_USER_BY_ID, [decoded.user_id]);
+        const user = rows[0];
+
+        if (!user) {
+            return res.status(401).json({ error: "User not found for token." });
+        }
+
+        if (!user.is_active) {
+            return res.status(403).json({ error: "Account is deactivated." });
+        }
+
+        req.user = {
+            user_id: Number(user.user_id),
+            role: user.role,
+            email: user.email
+        };
+
+        return next();
+    } catch {
+        return res.status(500).json({ error: "Failed to validate session." });
+    }
 };
 
-// 2️⃣ ROLE CHECK: EMPLOYER
 export const isEmployer = (req, res, next) => {
-    // We check against 'employer' based on your DB schema ENUM
-    if (req.user && req.user.role === 'employer') {
-        next();
-    } else {
-        return res.status(403).json({ error: "Access denied. Employers only." });
-    }
+    if (req.user?.role === 'employer') return next();
+    return res.status(403).json({ error: "Access denied. Employers only." });
 };
 
-// 3️⃣ ROLE CHECK: JOB SEEKER
 export const isSeeker = (req, res, next) => {
-    // We check against 'jobseeker' based on your DB schema ENUM
-    if (req.user && req.user.role === 'jobseeker') {
-        next();
-    } else {
-        return res.status(403).json({ error: "Access denied. Job seekers only." });
-    }
+    if (req.user?.role === 'jobseeker') return next();
+    return res.status(403).json({ error: "Access denied. Job seekers only." });
 };
 
-// 4️⃣ ROLE CHECK: ADMIN
 export const isAdmin = (req, res, next) => {
-    // We check against 'admin' based on your DB schema ENUM
-    if (req.user && req.user.role === 'admin') {
-        next();
-    } else {
-        return res.status(403).json({ error: "Access denied. Admins only." });
-    }
+    if (req.user?.role === 'admin') return next();
+    return res.status(403).json({ error: "Access denied. Admins only." });
 };
