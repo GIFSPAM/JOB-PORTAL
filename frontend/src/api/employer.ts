@@ -49,12 +49,45 @@ export const updateEmployerProfile = async (payload: {
   company_size?: string;
   company_location?: string;
   company_website?: string;
+  logo_url?: string;
 }): Promise<void> => {
   try {
     await api.put('/employer/profile', payload);
   } catch (err) {
     throw new Error(extractError(err, 'Failed to update profile'));
   }
+};
+
+export const uploadEmployerProfilePicture = async (profilePicture: File): Promise<void> => {
+  const createFormData = () => {
+    const formData = new FormData();
+    // Support both new and legacy backend field names.
+    formData.append('image', profilePicture);
+    return formData;
+  };
+
+  const baseURL = String(api.defaults.baseURL ?? '');
+  const hasApiPrefix = /\/api\/?$/i.test(baseURL);
+  const attempts: Array<{ method: 'post'; url: string }> = [
+    { method: 'post', url: '/employer/logo' },
+    ...(hasApiPrefix ? [] : [{ method: 'post' as const, url: '/api/employer/logo' }]),
+  ];
+
+  let lastError: unknown;
+  for (const attempt of attempts) {
+    try {
+      await api.post(attempt.url, createFormData());
+      return;
+    } catch (err) {
+      lastError = err;
+      // Keep trying only when route is missing.
+      if (!(err instanceof AxiosError) || err.response?.status !== 404) {
+        throw new Error(extractError(err, 'Failed to upload profile picture'));
+      }
+    }
+  }
+
+  throw new Error(extractError(lastError, 'Profile upload endpoint was not found (404).'));
 };
 
 export const fetchEmployerApplicantsByJob = async (jobId: number): Promise<JsonRecord[]> => {

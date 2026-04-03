@@ -16,6 +16,7 @@ import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { JobMatchCircle } from '../../components/JobMatchCircle';
 import { useAuth } from '../../context/AuthContext';
+import { COMPANY_LOGOS } from '../../assets/logos';
 
 type JobMatch = {
   matchPercentage: number;
@@ -151,6 +152,7 @@ export const JobDetail: React.FC = () => {
   const applyButtonDisabled = applying || checkingApplied || isApplied;
   const isJobClosed = String(job?.status ?? '').toLowerCase() === 'closed';
   const skillList = useMemo(() => (Array.isArray(job?.skills) ? job.skills : []), [job]);
+  const logoSrc = job?.logo || COMPANY_LOGOS.co_opert;
   const totalSkills = jobMatch ? jobMatch.matchedSkills.length + jobMatch.missingSkills.length : 0;
 
   return (
@@ -158,7 +160,7 @@ export const JobDetail: React.FC = () => {
       <div>
         <button
           onClick={() => navigate('/explore-jobs')}
-          className="mb-4 text-sm text-text-muted hover:text-white transition-colors inline-flex items-center gap-2"
+          className="mb-4 text-sm text-text-muted hover:text-white transition-colors inline-flex items-center gap-2 "
         >
           <ArrowLeft className="w-4 h-4" /> Back to Explore Jobs
         </button>
@@ -177,7 +179,19 @@ export const JobDetail: React.FC = () => {
           <div className="space-y-6">
             <div className="glass-card p-8">
               <div className="flex items-start justify-between gap-4 flex-wrap lg:flex-nowrap">
-                <div>
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 rounded-2xl border border-white/10 bg-white/5 overflow-hidden shrink-0">
+                    <img
+                      src={logoSrc}
+                      alt={`${job.company || 'Company'} logo`}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(event) => {
+                        event.currentTarget.src = COMPANY_LOGOS.co_opert;
+                      }}
+                    />
+                  </div>
+                  <div>
                   <h1 className="text-3xl font-display font-bold text-white inline-flex items-center gap-2">
                     <Briefcase className="w-7 h-7 text-brand-accent" /> {job.title}
                   </h1>
@@ -208,6 +222,7 @@ export const JobDetail: React.FC = () => {
                       {job.isVerified ? 'Verified' : 'Unverified'}
                     </span>
                   </div>
+                </div>
                 </div>
 
                 <div className="w-full lg:w-auto lg:min-w-[320px] flex flex-col items-start lg:items-end gap-3">

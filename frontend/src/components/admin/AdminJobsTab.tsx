@@ -11,6 +11,14 @@ interface AdminJobsTabProps {
   filteredJobs: AdminJob[];
   jobIdSearchQuery: string;
   onJobIdSearchChange: (value: string) => void;
+  jobTitleSearchQuery: string;
+  onJobTitleSearchChange: (value: string) => void;
+  jobLocationFilter: string;
+  onJobLocationFilterChange: (value: string) => void;
+  availableJobLocations: string[];
+  jobTypeFilter: string;
+  onJobTypeFilterChange: (value: string) => void;
+  availableJobTypes: string[];
   jobVerificationFilter: 'all' | 'verified' | 'unverified';
   onJobVerificationFilterChange: (value: 'all' | 'verified' | 'unverified') => void;
   actionKey: string | null;
@@ -26,6 +34,14 @@ export const AdminJobsTab: React.FC<AdminJobsTabProps> = ({
   filteredJobs,
   jobIdSearchQuery,
   onJobIdSearchChange,
+  jobTitleSearchQuery,
+  onJobTitleSearchChange,
+  jobLocationFilter,
+  onJobLocationFilterChange,
+  availableJobLocations,
+  jobTypeFilter,
+  onJobTypeFilterChange,
+  availableJobTypes,
   jobVerificationFilter,
   onJobVerificationFilterChange,
   actionKey,
@@ -35,7 +51,7 @@ export const AdminJobsTab: React.FC<AdminJobsTabProps> = ({
 }) => {
   return (
     <div className="glass-card p-8">
-      <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between mb-6">
         <div>
           <h2 className="text-lg font-display font-bold text-white flex items-center gap-2">
             <Briefcase className="w-5 h-5 text-brand-yellow" /> Job Moderation
@@ -44,8 +60,8 @@ export const AdminJobsTab: React.FC<AdminJobsTabProps> = ({
             {filteredJobs.length} shown of {jobs.length} jobs · {pendingJobsCount} pending verification
           </div>
         </div>
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="space-y-1">
+        <div className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,0.8fr)_minmax(0,1.1fr)_minmax(11rem,0.9fr)_minmax(11rem,0.9fr)_minmax(11rem,0.9fr)]">
+          <div className="space-y-1 min-w-0">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Job ID</label>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -53,16 +69,54 @@ export const AdminJobsTab: React.FC<AdminJobsTabProps> = ({
                 value={jobIdSearchQuery}
                 onChange={(event) => onJobIdSearchChange(event.target.value)}
                 placeholder="Search by Job ID"
-                className="input-field input-field-with-icon w-52"
+                className="input-field input-field-with-icon h-12 w-full min-w-0"
               />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Title</label>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+              <input
+                value={jobTitleSearchQuery}
+                onChange={(event) => onJobTitleSearchChange(event.target.value)}
+                placeholder="Search by title"
+                className="input-field input-field-with-icon h-12 w-full min-w-0"
+              />
+            </div>
+          </div>
+          <div className="space-y-1 min-w-0">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Location</label>
+            <select
+              value={jobLocationFilter}
+              onChange={(event) => onJobLocationFilterChange(event.target.value)}
+              className="input-field h-12 w-full min-w-0"
+            >
+              <option value="all">All</option>
+              {availableJobLocations.map((location) => (
+                <option key={location} value={location}>{location}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1 min-w-0">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Job Type</label>
+            <select
+              value={jobTypeFilter}
+              onChange={(event) => onJobTypeFilterChange(event.target.value)}
+              className="input-field h-12 w-full min-w-0"
+            >
+              <option value="all">All</option>
+              {availableJobTypes.map((jobType) => (
+                <option key={jobType} value={jobType}>{jobType}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1 min-w-0">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Verification</label>
             <select
               value={jobVerificationFilter}
               onChange={(event) => onJobVerificationFilterChange(event.target.value as 'all' | 'verified' | 'unverified')}
-              className="input-field h-12 w-44"
+              className="input-field h-12 w-full min-w-0"
             >
               <option value="all">All</option>
               <option value="verified">Verified</option>
@@ -93,7 +147,7 @@ export const AdminJobsTab: React.FC<AdminJobsTabProps> = ({
               location: job.location ?? 'No location',
               salary: formatSalaryRange(job.salary_min, job.salary_max),
               type: job.job_type || 'Unknown',
-              logo: job.logo,
+              logo: job.logo ?? job.profile_picture_url,
               status: job.status,
               isVerified: Boolean(job.is_verified),
             };

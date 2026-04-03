@@ -1,48 +1,39 @@
-import { lazy } from 'react';
+import { lazy, type ComponentType } from 'react';
 
-export const Home = lazy(() => import('../pages/Home').then((m) => ({ default: m.Home })));
-export const ExploreJobs = lazy(() => import('../pages/ExploreJobs').then((m) => ({ default: m.ExploreJobs })));
-export const JobDetail = lazy(() => import('../pages/jobs/JobDetail').then((m) => ({ default: m.JobDetail })));
-export const EmployerDetail = lazy(() => import('../pages/jobs/EmployerDetail').then((m) => ({ default: m.EmployerDetail })));
-export const EmployerMyJobs = lazy(() => import('../pages/jobs/EmployerMyJobs').then((m) => ({ default: m.EmployerMyJobs })));
-export const EmployerMyJobDetail = lazy(() =>
-  import('../pages/jobs/EmployerMyJobDetail').then((m) => ({ default: m.EmployerMyJobDetail })),
-);
-export const EmployerPostJob = lazy(() =>
-  import('../pages/jobs/EmployerPostJob').then((m) => ({ default: m.EmployerPostJob }))
-);
-export const Auth = lazy(() => import('../pages/Auth').then((m) => ({ default: m.Auth })));
-export const Applications = lazy(() => import('../pages/Applications').then((m) => ({ default: m.Applications })));
-export const SavedJobs = lazy(() => import('../pages/SavedJobs').then((m) => ({ default: m.SavedJobs })));
-export const EmployerApplications = lazy(() =>
-  import('../pages/EmployerApplications').then((m) => ({ default: m.EmployerApplications })),
-);
-export const EmployerApplicantDetail = lazy(() =>
-  import('../pages/EmployerApplicantDetail').then((m) => ({ default: m.EmployerApplicantDetail })),
-);
-export const EmployerJobApplicants = lazy(() =>
-  import('../pages/EmployerJobApplicants').then((m) => ({ default: m.EmployerJobApplicants })),
-);
+type LazyPageModule = Record<string, ComponentType>;
 
-export const SeekerDashboard = lazy(() =>
-  import('../pages/dashboard/SeekerDashboard').then((m) => ({ default: m.SeekerDashboard })),
-);
-export const EmployerDashboard = lazy(() =>
-  import('../pages/dashboard/EmployerDashboard').then((m) => ({ default: m.EmployerDashboard })),
-);
-export const AdminDashboard = lazy(() =>
-  import('../pages/dashboard/AdminDashboard').then((m) => ({ default: m.AdminDashboard })),
-);
-export const AdminUserDetail = lazy(() =>
-  import('../pages/dashboard/AdminUserDetail').then((m) => ({ default: m.AdminUserDetail })),
-);
-export const AdminJobDetail = lazy(() =>
-  import('../pages/dashboard/AdminJobDetail').then((m) => ({ default: m.AdminJobDetail })),
-);
+const lazyNamed = <TModule extends LazyPageModule, TKey extends keyof TModule>(
+  loader: () => Promise<TModule>,
+  key: TKey,
+) => lazy(() => loader().then((module) => ({ default: module[key] })));
 
-export const SeekerProfile = lazy(() =>
-  import('../pages/profile/SeekerProfile').then((m) => ({ default: m.SeekerProfile })),
-);
-export const EmployerProfile = lazy(() =>
-  import('../pages/profile/EmployerProfile').then((m) => ({ default: m.EmployerProfile })),
-);
+const loadPublicPages = () => import('../features/public/pages');
+const loadEmployerPages = () => import('../features/employer/pages');
+const loadSeekerPages = () => import('../features/seeker/pages');
+const loadAdminPages = () => import('../features/admin/pages');
+const loadAuthPages = () => import('../features/auth/pages');
+
+export const Home = lazyNamed(loadPublicPages, 'HomePage');
+export const ExploreJobs = lazyNamed(loadPublicPages, 'ExploreJobsPage');
+export const JobDetail = lazyNamed(loadPublicPages, 'JobDetailPage');
+export const EmployerDetail = lazyNamed(loadPublicPages, 'EmployerDetailPage');
+
+export const EmployerMyJobs = lazyNamed(loadEmployerPages, 'EmployerMyJobsPage');
+export const EmployerMyJobDetail = lazyNamed(loadEmployerPages, 'EmployerMyJobDetailPage');
+export const EmployerPostJob = lazyNamed(loadEmployerPages, 'EmployerPostJobPage');
+export const EmployerApplications = lazyNamed(loadEmployerPages, 'EmployerApplicationsPage');
+export const EmployerApplicantDetail = lazyNamed(loadEmployerPages, 'EmployerApplicantDetailPage');
+export const EmployerJobApplicants = lazyNamed(loadEmployerPages, 'EmployerJobApplicantsPage');
+export const EmployerDashboard = lazyNamed(loadEmployerPages, 'EmployerDashboardPage');
+export const EmployerProfile = lazyNamed(loadEmployerPages, 'EmployerProfilePage');
+
+export const Applications = lazyNamed(loadSeekerPages, 'SeekerApplicationsPage');
+export const SavedJobs = lazyNamed(loadSeekerPages, 'SeekerSavedJobsPage');
+export const SeekerDashboard = lazyNamed(loadSeekerPages, 'SeekerDashboardPage');
+export const SeekerProfile = lazyNamed(loadSeekerPages, 'SeekerProfilePage');
+
+export const AdminDashboard = lazyNamed(loadAdminPages, 'AdminDashboardPage');
+export const AdminUserDetail = lazyNamed(loadAdminPages, 'AdminUserDetailPage');
+export const AdminJobDetail = lazyNamed(loadAdminPages, 'AdminJobDetailPage');
+
+export const Auth = lazyNamed(loadAuthPages, 'AuthPage');

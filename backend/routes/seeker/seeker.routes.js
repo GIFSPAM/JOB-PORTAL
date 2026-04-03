@@ -1,6 +1,6 @@
 import express from 'express';
 import { verifyToken, isSeeker } from '../../middleware/authMiddleware.js';
-import { upload } from '../../middleware/uploadMiddleware.js';
+import { upload , uploadSeekerProfile } from '../../middleware/uploadMiddleware.js';
 import {
     applyForJob,
     getSeekerApplications,
@@ -15,8 +15,10 @@ import {
     removeSavedJob,
     getSeekerStats,
     getJobSkillMatch,
-    getEmployerDetails
+    getEmployerDetails,
+    updateLogo
 } from '../../controllers/seekerControllers.js';
+
 
 const router = express.Router();
 
@@ -40,6 +42,9 @@ router.post('/saved-jobs/:job_id', saveJob);
 router.get('/saved-jobs', getSavedJobs);
 router.delete('/saved-jobs/:job_id', removeSavedJob);
 router.get('/jobs/employer/:job_id', getEmployerDetails);
+
+// Route for seeker profile photo
+router.post('/photo', isSeeker, uploadSeekerProfile.single('image'), updateLogo);
 
 
 export default router;

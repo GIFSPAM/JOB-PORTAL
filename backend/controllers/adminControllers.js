@@ -68,7 +68,7 @@ export const getAllJobs = async (req, res) => {
             sql += ` AND j.status = ?`;
             params.push(status);
         }
-        if (is_verified !== undefined) {
+        if (is_verified === 'true' || is_verified === 'false') {
             sql += ` AND j.is_verified = ?`;
             params.push(is_verified === 'true' ? 1 : 0);
         }

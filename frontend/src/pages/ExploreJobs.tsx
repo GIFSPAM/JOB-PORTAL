@@ -1,13 +1,8 @@
 import React from 'react';
-import { PageContainer } from '../components/layout/PageContainer';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../components/Toast';
+import { PageContainer, useToast, ExploreJobsHeader, ExploreJobsFilters, ExploreJobsResults, ExploreJobSeekerActions } from '../components';
+import { useAuth } from '../context';
 import { useExploreJobs } from '../features/explore-jobs/useExploreJobs';
-import { ExploreJobsHeader } from '../components/explore/ExploreJobsHeader';
-import { ExploreJobsFilters } from '../components/explore/ExploreJobsFilters';
-import { ExploreJobsResults } from '../components/explore/ExploreJobsResults';
-import { ExploreJobSeekerActions } from '../components/explore/ExploreJobSeekerActions';
-import type { Job } from '../types/job';
+import type { Job } from '../types';
 
 export const ExploreJobs: React.FC = () => {
   const { user } = useAuth();

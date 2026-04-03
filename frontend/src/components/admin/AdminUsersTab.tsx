@@ -42,12 +42,12 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
 }) => {
   return (
     <div className="glass-card p-8">
-      <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
         <h2 className="text-lg font-display font-bold text-white flex items-center gap-2">
           <Users className="w-5 h-5 text-brand-accent" /> User Management
         </h2>
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="space-y-1">
+        <div className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_minmax(12rem,0.8fr)]">
+          <div className="space-y-1 min-w-0">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Search</label>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -55,16 +55,16 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                 value={userSearchQuery}
                 onChange={(event) => onUserSearchChange(event.target.value)}
                 placeholder="ID, email, company, website, or name"
-                className="input-field input-field-with-icon w-72"
+                className="input-field input-field-with-icon h-12 w-full min-w-0"
               />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Role</label>
             <select
               value={roleFilter}
               onChange={(event) => onRoleFilterChange(event.target.value as 'all' | 'jobseeker' | 'employer' | 'admin')}
-              className="input-field h-12 w-44"
+              className="input-field h-12 w-full min-w-0"
             >
               <option value="all">All Roles</option>
               <option value="jobseeker">Seekers</option>

@@ -5,6 +5,7 @@ export interface SeekerSkill {
 
 export interface SeekerProfile {
   full_name?: string;
+  avatar_url?: string;
   phone_number?: string;
   education?: string;
   experience_years?: number;

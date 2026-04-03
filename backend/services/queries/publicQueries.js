@@ -11,6 +11,7 @@ export const PUBLIC_JOBS_BASE_QUERY = `
         e.company_name,
         j.status,
         j.is_verified,
+        e.profile_picture_url, 
         (SELECT GROUP_CONCAT(s.skill_name)
          FROM JobSkills js
          JOIN Skills s ON js.skill_id = s.skill_id

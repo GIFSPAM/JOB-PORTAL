@@ -7,6 +7,46 @@ function persistTokenIfPresent(payload: unknown): void {
   if (typeof token === 'string') localStorage.setItem('token', token);
 }
 
+const appendSeekerFields = (body: JsonRecord, payload: RegisterPayload): void => {
+  body.full_name = payload.full_name;
+  body.education = payload.education;
+  body.experience_years = payload.experience_years;
+  body.phone_number = payload.phone_number;
+};
+
+const appendEmployerFields = (body: JsonRecord, payload: RegisterPayload): void => {
+  body.company_name = payload.company_name;
+  body.industry = payload.industry;
+  body.company_size = payload.company_size;
+  body.company_location = payload.company_location;
+  body.company_website = payload.company_website;
+  body.company_phone = payload.company_phone;
+};
+
+const buildRegisterBody = (payload: RegisterPayload): JsonRecord => {
+  const backendRole = toBackendRole(payload.role);
+
+  const body: JsonRecord = {
+    email: payload.email,
+    password: payload.password,
+    role: backendRole,
+  };
+
+  if (backendRole === 'jobseeker') {
+    appendSeekerFields(body, payload);
+  }
+
+  if (backendRole === 'employer') {
+    appendEmployerFields(body, payload);
+  }
+
+  if (backendRole === 'admin' && payload.secretKey) {
+    body.secretKey = payload.secretKey;
+  }
+
+  return body;
+};
+
 export const loginAPI = async (email: string, password: string): Promise<AuthApiEnvelope> => {
   try {
     const { data: payload } = await api.post<AuthApiEnvelope>('/auth/login', { email, password });
@@ -18,33 +58,7 @@ export const loginAPI = async (email: string, password: string): Promise<AuthApi
 };
 
 export const registerAPI = async (payload: RegisterPayload): Promise<AuthApiEnvelope> => {
-  const backendRole = toBackendRole(payload.role);
-
-  const body: JsonRecord = {
-    email: payload.email,
-    password: payload.password,
-    role: backendRole,
-  };
-
-  if (backendRole === 'jobseeker') {
-    body.full_name = payload.full_name;
-    body.education = payload.education;
-    body.experience_years = payload.experience_years;
-    body.phone_number = payload.phone_number;
-  }
-
-  if (backendRole === 'employer') {
-    body.company_name = payload.company_name;
-    body.industry = payload.industry;
-    body.company_size = payload.company_size;
-    body.company_location = payload.company_location;
-    body.company_website = payload.company_website;
-    body.company_phone = payload.company_phone;
-  }
-
-  if (backendRole === 'admin' && payload.secretKey) {
-    body.secretKey = payload.secretKey;
-  }
+  const body = buildRegisterBody(payload);
 
   try {
     const { data: responsePayload } = await api.post<AuthApiEnvelope>('/auth/register', body);

@@ -11,7 +11,6 @@ import {
 import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
 import type { SavedJob, SeekerApplication, SeekerProfile, SeekerStats } from '../../types/seeker';
-import { decrementStatsAfterRevoke } from '../../utils/seekerStats';
 
 export const SeekerDashboard: React.FC = () => {
   const navigate = useNavigate();

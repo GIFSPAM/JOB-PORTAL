@@ -11,7 +11,7 @@ export const HomeHero: React.FC = () => {
   const { springX, springY, handleMouseMove } = useHeroParallax();
 
   return (
-    <section className="relative pt-44 pb-32 px-6 overflow-hidden" onMouseMove={handleMouseMove}>
+    <section id="home-hero" className="relative pt-44 pb-32 px-6 overflow-hidden" onMouseMove={handleMouseMove}>
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
         <motion.div
           initial={{ opacity: 0, x: -30 }}

@@ -18,6 +18,7 @@ export const fetchAdminStats = async (): Promise<AdminStats> => {
 export const fetchAdminJobs = async (): Promise<AdminJob[]> => {
   try {
     const { data: p } = await api.get('/admin/all-jobs');
+    console.log('Fetched admin jobs', p);
     return Array.isArray(p?.data) ? (p.data as AdminJob[]) : [];
   } catch (err) {
     throw new Error(extractError(err, 'Failed to fetch jobs'));

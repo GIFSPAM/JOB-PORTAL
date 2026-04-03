@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Job } from '../types/job';
+import { useEffect, useState } from 'react';
 import { fetchJobs } from '../api';
-import { HomeHero } from '../components/home/HomeHero';
-import { HomeLatestJobsSection } from '../components/home/HomeLatestJobsSection';
-import { HomeFeaturesSection } from '../components/home/HomeFeaturesSection';
+import { HomeHero, HomeLatestJobsSection, HomeFeaturesSection } from '../components';
+import type { Job } from '../types';
 
 export const Home = () => {
   const [jobs, setJobs] = useState<Job[]>([]);

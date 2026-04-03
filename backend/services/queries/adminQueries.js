@@ -7,7 +7,7 @@ export const VERIFY_JOB = `
 export const ADMIN_ALL_JOBS_BASE_QUERY = `
     SELECT
         j.*,
-        e.company_name,
+        e.company_name,e.profile_picture_url,
         (SELECT GROUP_CONCAT(s.skill_name)
          FROM JobSkills js
          JOIN Skills s ON js.skill_id = s.skill_id
@@ -53,12 +53,14 @@ export const SELECT_USER_BY_ID = `
         js.phone_number,
         js.education,
         js.experience_years,
+        js.profile_picture_url AS seeker_profile_picture_url,
         e.company_name,
         e.company_phone,
         e.industry,
         e.company_size,
         e.company_location,
-        e.company_website
+        e.company_website,
+        e.profile_picture_url AS employer_profile_picture_url
     FROM Users u
     LEFT JOIN JobSeekers js ON js.seeker_id = u.user_id
     LEFT JOIN Employers e ON e.employer_id = u.user_id

@@ -10,8 +10,10 @@ import {
     deleteMyJob,
     getEmployerProfile,
     updateEmployerProfile,
-    getEmployerStats
+    getEmployerStats,
+    updateLogo
 } from '../../controllers/employerControllers.js';
+import { uploadEmployerProfile } from '../../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
@@ -31,5 +33,8 @@ router.patch('/application-status/:application_id', updateApplicationStatus);
 
 router.get('/profile', getEmployerProfile);
 router.put('/profile', updateEmployerProfile);
+
+// Route for employer profile/logo
+router.post('/logo', isEmployer, uploadEmployerProfile.single('image'), updateLogo);
 
 export default router;

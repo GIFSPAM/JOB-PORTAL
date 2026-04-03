@@ -30,7 +30,7 @@ export function mapJob(raw: RawJob): Job {
     location: String(raw.location ?? ''),
     salary: salaryLabel,
     type: String(raw.job_type ?? ''),
-    logo: str(raw.logo),
+    logo: str(raw.profile_picture_url),
     employerId: raw.employer_id != null ? Number(raw.employer_id) : undefined,
     description: str(raw.description),
     postedAt: str(raw.posted_at),

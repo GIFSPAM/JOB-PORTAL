@@ -55,12 +55,25 @@ export const updateSeekerProfile = async (payload: {
   phone_number?: string;
   education?: string;
   experience_years?: number;
+  avatar_url?: string;
 }): Promise<unknown> => {
   try {
     const { data: p } = await api.put('/seeker/profile', payload);
     return p;
   } catch (err) {
     throw new Error(extractError(err, 'Failed to update profile'));
+  }
+};
+
+export const uploadSeekerProfilePicture = async (profilePicture: File): Promise<unknown> => {
+  const formData = new FormData();
+  formData.append('image', profilePicture);
+
+  try {
+    const { data: p } = await api.post('/seeker/photo', formData);
+    return p;
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to upload profile picture'));
   }
 };
 
@@ -124,6 +137,7 @@ export const removeSeekerSavedJob = async (jobId: number): Promise<unknown> => {
 export interface EmployerDetails {
   employer_id: number;
   company_name: string;
+  logo_url?: string | null;
   company_phone?: string | null;
   industry?: string | null;
   company_size?: string | null;

@@ -181,7 +181,6 @@ export const getSeekerProfile = async (req, res) => {
         }
 
         const skillRows = await pool.query(SELECT_SEEKER_PROFILE_SKILLS, [req.user.user_id]);
-
         return res.status(200).json({
             success: true,
             data: { ...profileRows[0], skills: skillRows }
@@ -356,3 +355,19 @@ export const getEmployerDetails = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+// UPDATE SEEKER PROFILE PICTURE
+export const updateLogo = async (req, res) => {
+    const employerId = req.user.user_id;
+    if (!req.file || !req.file.path) {
+        return res.status(400).json({ success: false, message: 'No image file uploaded.' });
+    }
+    try {        
+        const profile_picture_url = req.file.path;
+        const result = await pool.query('UPDATE jobseekers SET profile_picture_url = ? WHERE seeker_id = ?', [profile_picture_url, employerId]);
+        return res.status(200).json({ success: true, message: 'Logo updated successfully.' });
+        console.log(result);
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error });
+    }
+}

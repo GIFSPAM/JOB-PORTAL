@@ -111,12 +111,12 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
           <p className="text-text-muted text-sm text-center py-10">No users yet.</p>
         ) : (
           <div className="space-y-3">
-            {users.slice(0, 8).map((user, index) => {
+            {users.slice(0, 5).map((user, index) => {
               const cls = ROLE_COLOR[user.role] ?? ROLE_COLOR.admin;
               return (
                 <div key={user.user_id ?? index} className="flex items-center justify-between p-3 rounded-xl bg-white/3 border border-white/5 hover:border-white/10 transition-all">
                   <p className="text-sm text-white truncate max-w-[60%]">{user.email}</p>
-                  <span className={`text-xs px-2 py-1 rounded-full border font-bold capitalize ${cls}`}>
+                  <span className={`text-xs px-2 py-1 rounded-full border font-bold capitalize ${cls} `}>
                     {user.role === 'jobseeker' ? 'Seeker' : user.role}
                   </span>
                 </div>

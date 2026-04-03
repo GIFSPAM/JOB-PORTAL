@@ -38,12 +38,22 @@ export const AdminDashboard: React.FC = () => {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'jobseeker' | 'employer' | 'admin'>('all');
   const [jobIdSearchQuery, setJobIdSearchQuery] = useState('');
+  const [jobTitleSearchQuery, setJobTitleSearchQuery] = useState('');
+  const [jobLocationFilter, setJobLocationFilter] = useState('all');
+  const [jobTypeFilter, setJobTypeFilter] = useState('all');
   const [jobVerificationFilter, setJobVerificationFilter] = useState<'all' | 'verified' | 'unverified'>('all');
 
   const activeTab = searchParams.get('tab') ?? 'overview';
   const pendingJobs = jobs.filter((job) => !Boolean(job.is_verified));
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
   const normalizedJobIdSearch = jobIdSearchQuery.trim();
+  const normalizedJobTitleSearch = jobTitleSearchQuery.trim().toLowerCase();
+  const availableJobLocations = Array.from(
+    new Set(jobs.map((job) => String(job.location ?? '').trim()).filter(Boolean)),
+  ).sort((left, right) => left.localeCompare(right));
+  const availableJobTypes = Array.from(
+    new Set(jobs.map((job) => String(job.job_type ?? '').trim()).filter(Boolean)),
+  ).sort((left, right) => left.localeCompare(right));
   const filteredUsers = users.filter((user) => {
     const roleMatch = roleFilter === 'all' || user.role === roleFilter;
     if (!roleMatch) return false;
@@ -60,10 +70,13 @@ export const AdminDashboard: React.FC = () => {
   });
   const filteredJobs = jobs.filter((job) => {
     const matchesId = !normalizedJobIdSearch || String(job.job_id ?? '').includes(normalizedJobIdSearch);
+    const matchesTitle = !normalizedJobTitleSearch || String(job.title ?? '').toLowerCase().includes(normalizedJobTitleSearch);
+    const matchesLocation = jobLocationFilter === 'all' || String(job.location ?? '') === jobLocationFilter;
+    const matchesJobType = jobTypeFilter === 'all' || String(job.job_type ?? '') === jobTypeFilter;
     const matchesVerification = jobVerificationFilter === 'all'
       || (jobVerificationFilter === 'verified' && Boolean(job.is_verified))
       || (jobVerificationFilter === 'unverified' && !Boolean(job.is_verified));
-    return matchesId && matchesVerification;
+    return matchesId && matchesTitle && matchesLocation && matchesJobType && matchesVerification;
   });
 
   const loadAdminData = async (silent = false): Promise<void> => {
@@ -268,6 +281,14 @@ export const AdminDashboard: React.FC = () => {
             filteredJobs={filteredJobs}
             jobIdSearchQuery={jobIdSearchQuery}
             onJobIdSearchChange={setJobIdSearchQuery}
+            jobTitleSearchQuery={jobTitleSearchQuery}
+            onJobTitleSearchChange={setJobTitleSearchQuery}
+            jobLocationFilter={jobLocationFilter}
+            onJobLocationFilterChange={setJobLocationFilter}
+            availableJobLocations={availableJobLocations}
+            jobTypeFilter={jobTypeFilter}
+            onJobTypeFilterChange={setJobTypeFilter}
+            availableJobTypes={availableJobTypes}
             jobVerificationFilter={jobVerificationFilter}
             onJobVerificationFilterChange={setJobVerificationFilter}
             actionKey={actionKey}

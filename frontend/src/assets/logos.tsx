@@ -14,7 +14,7 @@ export const COMPANY_LOGOS = {
     slack: "https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg",
     adobe: "https://upload.wikimedia.org/wikipedia/commons/d/dd/Adobe_Corporate_Logo.svg",
     uber: "https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png",
-    co_opert: co_opert_Logo
+    co_opert: googleLogo
 
 };
 

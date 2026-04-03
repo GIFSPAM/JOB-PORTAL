@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from '../components/ProtectedRoute';
+import { ProtectedRoute } from '../components';
+import type { BackendRole } from '../types/auth';
 import {
   Home,
   ExploreJobs,
@@ -24,158 +25,69 @@ import {
   EmployerProfile,
 } from './lazyPages';
 
+interface ProtectedRouteDef {
+  path: string;
+  element: React.ReactElement;
+  roles?: BackendRole[];
+}
+
+const renderProtectedRoutes = (routes: ProtectedRouteDef[]) =>
+  routes.map(({ path, element, roles }) => (
+    <Route
+      key={path}
+      path={path}
+      element={<ProtectedRoute roles={roles}>{element}</ProtectedRoute>}
+    />
+  ));
+
+const commonProtectedRoutes: ProtectedRouteDef[] = [
+  { path: '/explore-jobs', element: <ExploreJobs /> },
+  { path: '/jobs/:jobId', element: <JobDetail /> },
+  { path: '/employers/:employerId', element: <EmployerDetail /> },
+];
+
+const seekerRoutes: ProtectedRouteDef[] = [
+  { path: '/seeker/dashboard', element: <SeekerDashboard />, roles: ['jobseeker'] },
+  { path: '/seeker/applications', element: <Applications />, roles: ['jobseeker'] },
+  { path: '/seeker/saved-jobs', element: <SavedJobs />, roles: ['jobseeker'] },
+  { path: '/seeker/profile', element: <SeekerProfile />, roles: ['jobseeker'] },
+];
+
+const employerRoutes: ProtectedRouteDef[] = [
+  { path: '/employer/dashboard', element: <EmployerDashboard />, roles: ['employer'] },
+  { path: '/employer/applications', element: <EmployerApplications />, roles: ['employer'] },
+  {
+    path: '/employer/applications/:applicationId',
+    element: <EmployerApplicantDetail />,
+    roles: ['employer'],
+  },
+  {
+    path: '/employer/applications/job/:jobId',
+    element: <EmployerJobApplicants />,
+    roles: ['employer'],
+  },
+  { path: '/employer/my-jobs', element: <EmployerMyJobs />, roles: ['employer'] },
+  { path: '/employer/my-jobs/new', element: <EmployerPostJob />, roles: ['employer'] },
+  { path: '/employer/my-jobs/:jobId', element: <EmployerMyJobDetail />, roles: ['employer'] },
+  { path: '/employer/profile', element: <EmployerProfile />, roles: ['employer'] },
+];
+
+const adminRoutes: ProtectedRouteDef[] = [
+  { path: '/admin/dashboard', element: <AdminDashboard />, roles: ['admin'] },
+  { path: '/admin/users/:userId', element: <AdminUserDetail />, roles: ['admin'] },
+  { path: '/admin/jobs/:jobId', element: <AdminJobDetail />, roles: ['admin'] },
+];
+
 export const AppRoutes: React.FC = () => (
   <Routes>
     <Route path="/" element={<Home />} />
-    <Route
-      path="/explore-jobs"
-      element={
-        <ProtectedRoute>
-          <ExploreJobs />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/jobs/:jobId"
-      element={
-        <ProtectedRoute>
-          <JobDetail />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employers/:employerId"
-      element={
-        <ProtectedRoute>
-          <EmployerDetail />
-        </ProtectedRoute>
-      }
-    />
+    {renderProtectedRoutes(commonProtectedRoutes)}
     <Route path="/login" element={<Auth />} />
     <Route path="/register" element={<Auth />} />
     <Route path="/admin" element={<Auth />} />
-
-    <Route
-      path="/seeker/dashboard"
-      element={
-        <ProtectedRoute roles={['jobseeker']}>
-          <SeekerDashboard />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/seeker/applications"
-      element={
-        <ProtectedRoute roles={['jobseeker']}>
-          <Applications />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/seeker/saved-jobs"
-      element={
-        <ProtectedRoute roles={['jobseeker']}>
-          <SavedJobs />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/dashboard"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerDashboard />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/applications"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerApplications />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/applications/:applicationId"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerApplicantDetail />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/applications/job/:jobId"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerJobApplicants />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/my-jobs"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerMyJobs />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/my-jobs/new"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerPostJob />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/my-jobs/:jobId"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerMyJobDetail />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/admin/dashboard"
-      element={
-        <ProtectedRoute roles={['admin']}>
-          <AdminDashboard />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/admin/users/:userId"
-      element={
-        <ProtectedRoute roles={['admin']}>
-          <AdminUserDetail />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/admin/jobs/:jobId"
-      element={
-        <ProtectedRoute roles={['admin']}>
-          <AdminJobDetail />
-        </ProtectedRoute>
-      }
-    />
-
-    <Route
-      path="/seeker/profile"
-      element={
-        <ProtectedRoute roles={['jobseeker']}>
-          <SeekerProfile />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/employer/profile"
-      element={
-        <ProtectedRoute roles={['employer']}>
-          <EmployerProfile />
-        </ProtectedRoute>
-      }
-    />
+    {renderProtectedRoutes(seekerRoutes)}
+    {renderProtectedRoutes(employerRoutes)}
+    {renderProtectedRoutes(adminRoutes)}
 
     <Route path="/dashboard/seeker" element={<Navigate to="/seeker/dashboard" replace />} />
     <Route path="/dashboard/employer" element={<Navigate to="/employer/dashboard" replace />} />

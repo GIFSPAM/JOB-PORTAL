@@ -25,6 +25,10 @@ export interface AdminUser {
   is_active: boolean | number;
   created_at?: string;
   full_name?: string;
+  avatar_url?: string;
+  profile_picture_url?: string;
+  seeker_profile_picture_url?: string;
+  employer_profile_picture_url?: string;
   company_name?: string;
   phone_number?: string;
   education?: string;
@@ -51,5 +55,6 @@ export interface AdminJob {
   company_name?: string;
   company_website?: string;
   logo?: string;
+  profile_picture_url?: string;
   skills?: string[];
 }

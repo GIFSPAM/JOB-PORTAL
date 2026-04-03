@@ -12,7 +12,8 @@ import {
 } from '../services/queries/authQueries.js';
 
 const signToken = (user_id, role) =>
-    jwt.sign({ user_id, role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    jwt.sign({ user_id, role }, process.env.JWT_SECRET, { expiresIn: '10d' });
+
 export const register = async (req, res) => {
     const { email, password, role, secretKey, ...profileData } = req.body;
 

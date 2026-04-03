@@ -7,19 +7,23 @@ import { LoginAuth } from '../components/auth/LoginAuth';
 import { RegisterForm } from '../components/auth/RegisterForm';
 import { useAuth, getDashboardRoute } from '../context/AuthContext';
 
+const isLoginPath = (pathname: string) => pathname === '/login' || pathname === '/admin';
+
+const getAuthStep = (loginMode: boolean) => (loginMode ? 2 : 1);
+
 export const Auth = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLogin, setIsLogin] = useState(location.pathname === '/login');
+  const [isLogin, setIsLogin] = useState(isLoginPath(location.pathname));
   const [role, setRole] = useState<Role>('seeker');
   // Login skips role selector (step 2 directly); register starts at selector (step 1)
-  const [step, setStep] = useState(location.pathname === '/login' ? 2 : 1);
+  const [step, setStep] = useState(getAuthStep(isLoginPath(location.pathname)));
 
   useEffect(() => {
-    const login = location.pathname === '/login'|| location.pathname === '/admin';
+    const login = isLoginPath(location.pathname);
     setIsLogin(login);
-    setStep(login ? 2 : 1);
+    setStep(getAuthStep(login));
   }, [location.pathname]);
 
   const handleRoleSelect = (selectedRole: Role) => {
@@ -30,7 +34,7 @@ export const Auth = () => {
   const toggleAuthMode = () => {
     const newMode = !isLogin;
     setIsLogin(newMode);
-    setStep(newMode ? 2 : 1);
+    setStep(getAuthStep(newMode));
     navigate(newMode ? '/login' : '/register');
   };
 
@@ -41,25 +45,23 @@ export const Auth = () => {
   // Already logged in → go straight to their dashboard
   if (user) return <Navigate to={getDashboardRoute(user.role)} replace />;
 
-  const containerClass = isLogin ? 'max-w-xl w-full' : 'w-full';
+  const containerClassName = isLogin ? 'max-w-xl w-full' : 'w-full';
+  const sectionClassName = `px-6 min-h-screen ${isLogin ? 'pt-44 pb-24 flex items-center justify-center' : 'pt-32 pb-16'}`;
 
-  const renderAuthForm = () => {
-    if (isLogin) {
-      return <LoginAuth onSuccess={handleSuccess} onToggleMode={toggleAuthMode} />;
-    }
-    return (
-      <RegisterForm
-        role={role}
-        onBack={() => setStep(1)}
-        onSuccess={handleSuccess}
-        onToggleMode={toggleAuthMode}
-      />
-    );
-  };
+  const authForm = isLogin ? (
+    <LoginAuth onSuccess={handleSuccess} onToggleMode={toggleAuthMode} />
+  ) : (
+    <RegisterForm
+      role={role}
+      onBack={() => setStep(1)}
+      onSuccess={handleSuccess}
+      onToggleMode={toggleAuthMode}
+    />
+  );
 
   return (
-    <section className={`px-6 min-h-screen ${isLogin ? 'pt-44 pb-24 flex items-center justify-center' : 'pt-32 pb-16'}`}>
-      <div className={containerClass}>
+    <section className={sectionClassName}>
+      <div className={containerClassName}>
         <AnimatePresence mode="wait">
           {step === 1 ? (
             <RoleSelector
@@ -69,9 +71,7 @@ export const Auth = () => {
               onToggleMode={toggleAuthMode}
             />
           ) : (
-            <div key="auth-form-container">
-              {renderAuthForm()}
-            </div>
+            <div key="auth-form-container">{authForm}</div>
           )}
         </AnimatePresence>
       </div>

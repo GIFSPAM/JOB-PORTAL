@@ -12,6 +12,7 @@ type EmployerApplicant = {
   job_id?: number;
   job_title?: string;
   seeker?: {
+    avatar_url?: string | null;
     full_name?: string;
     education?: string;
     experience_years?: number;
@@ -198,13 +199,27 @@ export const EmployerApplicantDetail: React.FC = () => {
         ) : (
           <div className="rounded-3xl border-2 border-brand-accent/35 bg-brand-bg/95 shadow-[0_24px_80px_rgba(0,0,0,0.55)] p-6 space-y-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-full border border-white/15 bg-brand-accent/15 text-brand-accent font-bold flex items-center justify-center overflow-hidden shrink-0">
+                  {application.seeker?.avatar_url ? (
+                    <img
+                      src={application.seeker.avatar_url}
+                      alt={application.seeker?.full_name ?? 'Applicant avatar'}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    String(application.seeker?.full_name ?? 'A').trim().charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div>
                 <h2 className="text-2xl font-display font-bold text-white">
                   {application.seeker?.full_name ?? 'Unknown Candidate'}
                 </h2>
                 <p className="text-text-muted mt-1 inline-flex items-center gap-2">
                   <Briefcase className="w-4 h-4" /> {application.job_title ?? 'Untitled Job'}
                 </p>
+              </div>
               </div>
               <span className={`text-xs px-2.5 py-1 rounded-full border font-bold capitalize ${statusClass}`}>
                 {application.application_status ?? 'applied'}

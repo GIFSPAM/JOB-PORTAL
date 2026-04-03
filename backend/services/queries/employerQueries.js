@@ -71,6 +71,7 @@ export const JOB_APPLICANTS_BASE_QUERY = `
         s.experience_years,
         s.resume_path,
         s.phone_number,
+        s.profile_picture_url,
         (SELECT GROUP_CONCAT(CONCAT(msk.skill_name, ':', sk.proficiency))
          FROM SeekerSkills sk
          JOIN Skills msk ON sk.skill_id = msk.skill_id
@@ -95,7 +96,7 @@ export const SELECT_JOB_OWNER = 'SELECT employer_id FROM Jobs WHERE job_id = ?';
 export const DELETE_JOB = 'DELETE FROM Jobs WHERE job_id = ?';
 
 export const SELECT_EMPLOYER_PROFILE = `
-    SELECT employer_id, company_name, company_phone, industry, company_size, company_location, company_website
+    SELECT employer_id, company_name, company_phone, industry, company_size, company_location, company_website,profile_picture_url 
     FROM Employers
     WHERE employer_id = ?
     LIMIT 1

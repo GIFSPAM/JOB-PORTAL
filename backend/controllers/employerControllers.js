@@ -195,6 +195,7 @@ export const getJobApplicants = async (req, res) => {
                     ? `${baseUrl}/api/auth/resume-download/${Number(app.application_id)}`
                     : null,
                 phone_number: app.phone_number,
+                avatar_url: app.profile_picture_url || null,
                 skills: app.seeker_skills
                     ? app.seeker_skills.split(',').map(pair => {
                         const [name, proficiency] = pair.split(':');
@@ -347,5 +348,18 @@ export const downloadCandidateResume = async (req, res) => {
     }
 };
 
-
+export const updateLogo = async (req, res) => {
+    const employerId = req.user.user_id;
+    if (!req.file || !req.file.path) {
+        return res.status(400).json({ success: false, message: 'No image file uploaded.' });
+    }
+    try {        
+        const profile_picture_url = req.file.path;
+        const result = await pool.query('UPDATE Employers SET profile_picture_url = ? WHERE employer_id = ?', [profile_picture_url, employerId]);
+        return res.status(200).json({ success: true, message: 'Logo updated successfully.' });
+        console.log(result);
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error });
+    }
+}
 

@@ -124,7 +124,7 @@ export const AdminJobDetail: React.FC = () => {
       location: job.location ?? 'No location',
       salary: formatSalaryRange(job.salary_min, job.salary_max),
       type: job.job_type || 'Unknown',
-      logo: job.logo,
+      logo: job.logo ?? job.profile_picture_url,
       status: job.status,
       isVerified: Boolean(job.is_verified),
     };

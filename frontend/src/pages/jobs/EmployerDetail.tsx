@@ -7,6 +7,7 @@ import { JobCard } from '../../components/JobCard';
 import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { normalizeWebsiteUrl } from '../../utils/formatters';
+import { COMPANY_LOGOS } from '../../assets/logos';
 
 export const EmployerDetail: React.FC = () => {
   const location = useLocation();
@@ -72,11 +73,27 @@ export const EmployerDetail: React.FC = () => {
     () => normalizeWebsiteUrl(employerDetails?.company_website),
     [employerDetails?.company_website],
   );
+  const companyLogo = useMemo(
+    () => employerDetails?.logo_url || jobs[0]?.logo || COMPANY_LOGOS.co_opert,
+    [employerDetails?.logo_url, jobs],
+  );
 
   return (
     <PageContainer maxWidthClass="max-w-7xl" contentClassName="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 rounded-2xl border border-white/10 bg-white/5 overflow-hidden shrink-0">
+            <img
+              src={companyLogo}
+              alt={`${companyName} logo`}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(event) => {
+                event.currentTarget.src = COMPANY_LOGOS.co_opert;
+              }}
+            />
+          </div>
+          <div>
           <button
             onClick={() => navigate('/explore-jobs')}
             className="mb-4 text-sm text-text-muted hover:text-white transition-colors inline-flex items-center gap-2"
@@ -91,6 +108,7 @@ export const EmployerDetail: React.FC = () => {
               ? `${employerDetails.industry} employer with open verified jobs.`
               : 'Open verified jobs published by this employer.'}
           </p>
+        </div>
         </div>
         <span className="inline-flex items-center px-3 py-1 rounded-full border border-brand-accent/20 bg-brand-accent/10 text-brand-accent text-xs font-bold uppercase tracking-widest">
           {loading ? 'Loading...' : `${jobs.length} active jobs`}

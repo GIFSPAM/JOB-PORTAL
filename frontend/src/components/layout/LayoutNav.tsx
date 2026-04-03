@@ -4,19 +4,64 @@ import { motion } from 'motion/react';
 import { Logo } from '../Logo';
 import { useAuth, getDashboardRoute } from '../../context/AuthContext';
 
+interface NavLinkItem {
+  to: string;
+  label: string;
+}
+
+const baseNavTextClass = 'hover:text-white transition-colors drop-shadow-sm';
+const activeNavTextClass = 'text-white';
+
+const getGuestLinks = (): NavLinkItem[] => [
+  { to: '/', label: 'Home' },
+  { to: '/explore-jobs', label: 'Explore Jobs' },
+  { to: '/register', label: 'Post a Job' },
+  { to: '/login', label: 'Admin' },
+];
+
+const getAdminLinks = (): NavLinkItem[] => [
+  { to: '/admin/dashboard?tab=overview', label: 'Overview' },
+  { to: '/admin/dashboard?tab=users', label: 'Users' },
+  { to: '/admin/dashboard?tab=jobs', label: 'Jobs' },
+];
+
+const getUserLinks = (
+  role: 'jobseeker' | 'employer',
+  dashboardRoute: string,
+  profileRoute: string,
+): NavLinkItem[] => {
+  if (role === 'jobseeker') {
+    return [
+      { to: dashboardRoute, label: 'My Dashboard' },
+      { to: '/explore-jobs', label: 'Explore Jobs' },
+      { to: '/seeker/applications', label: 'Applications' },
+      { to: '/seeker/saved-jobs', label: 'Saved Jobs' },
+      { to: profileRoute, label: 'My Profile' },
+    ];
+  }
+
+  return [
+    { to: dashboardRoute, label: 'My Dashboard' },
+    { to: '/employer/applications', label: 'Applications' },
+    { to: '/employer/my-jobs', label: 'My Jobs' },
+    { to: profileRoute, label: 'My Profile' },
+  ];
+};
+
 export const LayoutNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showNav, setShowNav] = useState(true);
   const [navHovered, setNavHovered] = useState(false);
+  const isHomePage = location.pathname === '/';
   const isAdminUser = user?.role === 'admin';
   const adminTab = new URLSearchParams(location.search).get('tab') ?? 'overview';
 
   const adminNavClass = (tab: string) =>
     adminTab === tab
-      ? 'text-white'
-      : 'hover:text-white transition-colors drop-shadow-sm';
+      ? activeNavTextClass
+      : baseNavTextClass;
 
   const profileRoute =
     user?.role === 'jobseeker'
@@ -26,10 +71,37 @@ export const LayoutNav: React.FC = () => {
         : '/admin/dashboard';
   const dashboardRoute = user ? getDashboardRoute(user.role) : '/';
   const seekerNavClass = (path: string) =>
-    location.pathname === path ? 'text-white' : 'hover:text-white transition-colors drop-shadow-sm';
+    location.pathname === path ? activeNavTextClass : baseNavTextClass;
+
+  const navLinks = isAdminUser
+    ? getAdminLinks()
+    : user && user.role !== 'admin'
+      ? getUserLinks(user.role, dashboardRoute, profileRoute)
+      : getGuestLinks();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    if (isHomePage) {
+      const updateHomeNavVisibility = () => {
+        const heroSection = document.getElementById('home-hero');
+        const heroBottom = heroSection
+          ? heroSection.getBoundingClientRect().top + window.scrollY + heroSection.offsetHeight
+          : window.innerHeight;
+
+        setShowNav(window.scrollY <= heroBottom - 120 || navHovered);
+      };
+
+      updateHomeNavVisibility();
+      window.addEventListener('scroll', updateHomeNavVisibility, { passive: true });
+      window.addEventListener('resize', updateHomeNavVisibility);
+
+      return () => {
+        window.removeEventListener('scroll', updateHomeNavVisibility);
+        window.removeEventListener('resize', updateHomeNavVisibility);
+      };
+    }
+
     if (window.matchMedia('(pointer: coarse)').matches) {
       setShowNav(true);
       return;
@@ -50,7 +122,7 @@ export const LayoutNav: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('focusin', revealNav);
     };
-  }, [navHovered]);
+  }, [isHomePage, navHovered]);
 
   return (
     <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-full px-6 max-w-6xl pointer-events-none h-28">
@@ -73,70 +145,17 @@ export const LayoutNav: React.FC = () => {
         <Logo />
 
         <div className="hidden md:flex items-center gap-10 text-sm font-bold text-text-muted">
-          {isAdminUser ? (
-            <>
-              <Link to="/admin/dashboard?tab=overview" className={adminNavClass('overview')}>
-                Overview
+          {navLinks.map((item) => {
+            const className = isAdminUser
+              ? adminNavClass(item.label.toLowerCase())
+              : seekerNavClass(item.to);
+
+            return (
+              <Link key={item.to} to={item.to} className={className}>
+                {item.label}
               </Link>
-              <Link to="/admin/dashboard?tab=users" className={adminNavClass('users')}>
-                Users
-              </Link>
-              <Link to="/admin/dashboard?tab=jobs" className={adminNavClass('jobs')}>
-                Jobs
-              </Link>
-            </>
-          ) : user ? (
-            <>
-              <Link to={dashboardRoute} className={seekerNavClass(dashboardRoute)}>
-                My Dashboard
-              </Link>
-              {user.role === 'jobseeker' && (
-                <Link to="/explore-jobs" className={seekerNavClass('/explore-jobs')}>
-                  Explore Jobs
-                </Link>
-              )}
-              {user.role === 'employer' && (
-                <Link to="/employer/applications" className={seekerNavClass('/employer/applications')}>
-                  Applications
-                </Link>
-              )}
-              {user.role === 'employer' && (
-                <Link to="/employer/my-jobs" className={seekerNavClass('/employer/my-jobs')}>
-                  My Jobs
-                </Link>
-              )}
-              {user.role === 'jobseeker' && (
-                <Link to="/seeker/applications" className={seekerNavClass('/seeker/applications')}>
-                  Applications
-                </Link>
-              )}
-              {user.role === 'jobseeker' && (
-                <Link to="/seeker/saved-jobs" className={seekerNavClass('/seeker/saved-jobs')}>
-                  Saved Jobs
-                </Link>
-              )}
-              {user.role !== 'admin' && (
-                <Link to={profileRoute} className={seekerNavClass(profileRoute)}>
-                  My Profile
-                </Link>
-              )}
-            </>
-          ) : (
-            <>
-              <Link to="/" className="hover:text-white transition-colors drop-shadow-sm">
-                Home
-              </Link>
-              <Link to="/explore-jobs" className="hover:text-white transition-colors drop-shadow-sm">
-                Explore Jobs
-              </Link>
-              <Link to="/register" className="hover:text-white transition-colors drop-shadow-sm">
-                Post a Job
-              </Link>
-              <Link to="/login" className="hover:text-white transition-colors drop-shadow-sm">
-                Admin
-              </Link>
-            </>
-          )}
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-6">
@@ -154,7 +173,7 @@ export const LayoutNav: React.FC = () => {
             <>
               <Link
                 to="/login"
-                className="text-sm font-bold text-text-muted hover:text-white transition-colors drop-shadow-sm"
+                className={`text-sm font-bold text-text-muted ${baseNavTextClass}`}
               >
                 Log In
               </Link>

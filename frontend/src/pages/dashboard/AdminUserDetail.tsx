@@ -45,6 +45,25 @@ const displayNameForUser = (user: AdminUser | null) => {
   return user?.email || 'Unnamed user';
 };
 
+const getUserAvatarSrc = (user: AdminUser | null) => {
+  if (!user) return '';
+
+  if (user.role === 'employer') {
+    return String(user.employer_profile_picture_url ?? user.profile_picture_url ?? '').trim();
+  }
+
+  if (user.role === 'jobseeker') {
+    return String(user.seeker_profile_picture_url ?? user.profile_picture_url ?? user.avatar_url ?? '').trim();
+  }
+
+  return String(user.profile_picture_url ?? user.avatar_url ?? '').trim();
+};
+
+const getUserAvatarFallback = (user: AdminUser | null) => {
+  const name = displayNameForUser(user).trim();
+  return name ? name.charAt(0).toUpperCase() : 'U';
+};
+
 export const AdminUserDetail: React.FC = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -100,6 +119,7 @@ export const AdminUserDetail: React.FC = () => {
   }, [loadUser, navigate, toast, validUserId]);
 
   const badgeClass = ROLE_COLOR[user?.role] ?? ROLE_COLOR.admin;
+  const avatarSrc = getUserAvatarSrc(user);
 
   const detailRows = useMemo(() => {
     if (!user) return [];
@@ -224,11 +244,25 @@ export const AdminUserDetail: React.FC = () => {
         ) : (
           <>
             <div className="glass-card p-6 flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <h2 className="text-2xl font-display font-bold text-white">#{user.user_id} · {displayNameForUser(user)}</h2>
-                <p className="text-text-muted mt-1 inline-flex items-center gap-2">
-                  <Mail className="w-4 h-4" /> {user.email}
-                </p>
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 rounded-2xl border border-white/10 bg-white/5 text-brand-accent font-bold text-lg flex items-center justify-center overflow-hidden shrink-0">
+                  {avatarSrc ? (
+                    <img
+                      src={avatarSrc}
+                      alt={`${displayNameForUser(user)} avatar`}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    getUserAvatarFallback(user)
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-white">#{user.user_id} · {displayNameForUser(user)}</h2>
+                  <p className="text-text-muted mt-1 inline-flex items-center gap-2">
+                    <Mail className="w-4 h-4" /> {user.email}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs px-2.5 py-1 rounded-full border font-bold ${badgeClass}`}>

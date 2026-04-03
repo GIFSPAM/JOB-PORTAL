@@ -5,11 +5,6 @@ import { fetchEmployerStats, fetchEmployerJobs, fetchEmployerProfile } from '../
 import { useToast } from '../../components/Toast';
 import { PageContainer } from '../../components/layout/PageContainer';
 
-const JOB_STATUS: Record<string, string> = {
-  open:   'bg-green-500/10 text-green-400 border-green-500/20',
-  closed: 'bg-white/5 text-text-muted border-white/10',
-};
-
 export const EmployerDashboard: React.FC = () => {
   const toast      = useToast();
 

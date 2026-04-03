@@ -37,7 +37,7 @@ export const INSERT_SEEKER_SKILL = `
 `;
 
 export const SELECT_SEEKER_PROFILE = `
-    SELECT seeker_id, full_name, phone_number, education, experience_years, resume_path, resume_filename
+    SELECT seeker_id, full_name, phone_number, education, experience_years, resume_path, resume_filename ,profile_picture_url
     FROM JobSeekers
     WHERE seeker_id = ?
     LIMIT 1
