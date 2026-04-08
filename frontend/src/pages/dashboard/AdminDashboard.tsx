@@ -11,6 +11,7 @@ import {
   fetchAdminStats,
   fetchAdminJobs,
   fetchAdminUsers,
+  fetchAdminLogs,
   updateAdminUserStatus,
   deleteAdminUser,
   deleteAdminJob,
@@ -22,7 +23,8 @@ import { StatCard } from '../../components/dashboard/StatCard';
 import { AdminOverviewTab } from '../../components/admin/AdminOverviewTab';
 import { AdminUsersTab } from '../../components/admin/AdminUsersTab';
 import { AdminJobsTab } from '../../components/admin/AdminJobsTab';
-import type { AdminJob, AdminStats, AdminUser } from '../../types/admin';
+import { AdminLogsTab } from '../../components/admin/AdminLogsTab';
+import type { AdminJob, AdminLog, AdminStats, AdminUser } from '../../types/admin';
 import { PageContainer } from '../../components/layout/PageContainer';
 
 export const AdminDashboard: React.FC = () => {
@@ -33,6 +35,7 @@ export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionKey, setActionKey] = useState<string | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -42,6 +45,8 @@ export const AdminDashboard: React.FC = () => {
   const [jobLocationFilter, setJobLocationFilter] = useState('all');
   const [jobTypeFilter, setJobTypeFilter] = useState('all');
   const [jobVerificationFilter, setJobVerificationFilter] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [logSearchQuery, setLogSearchQuery] = useState('');
+  const [logTableFilter, setLogTableFilter] = useState('all');
 
   const activeTab = searchParams.get('tab') ?? 'overview';
   const pendingJobs = jobs.filter((job) => !Boolean(job.is_verified));
@@ -54,6 +59,10 @@ export const AdminDashboard: React.FC = () => {
   const availableJobTypes = Array.from(
     new Set(jobs.map((job) => String(job.job_type ?? '').trim()).filter(Boolean)),
   ).sort((left, right) => left.localeCompare(right));
+  const availableLogTypes = Array.from(
+    new Set(logs.map((log) => String(log.target_table ?? '').trim()).filter(Boolean)),
+  ).sort((left, right) => left.localeCompare(right));
+  const normalizedLogSearch = logSearchQuery.trim().toLowerCase();
   const filteredUsers = users.filter((user) => {
     const roleMatch = roleFilter === 'all' || user.role === roleFilter;
     if (!roleMatch) return false;
@@ -78,18 +87,36 @@ export const AdminDashboard: React.FC = () => {
       || (jobVerificationFilter === 'unverified' && !Boolean(job.is_verified));
     return matchesId && matchesTitle && matchesLocation && matchesJobType && matchesVerification;
   });
+  const filteredLogs = logs.filter((log) => {
+    const tableMatch = logTableFilter === 'all' || String(log.target_table ?? '') === logTableFilter;
+    if (!tableMatch) return false;
+    if (!normalizedLogSearch) return true;
+
+    const searchable = [
+      String(log.log_id ?? ''),
+      String(log.admin_id ?? ''),
+      log.admin_email ?? '',
+      log.action_type ?? '',
+      log.target_table ?? '',
+      String(log.target_id ?? ''),
+    ];
+
+    return searchable.join(' ').toLowerCase().includes(normalizedLogSearch);
+  });
 
   const loadAdminData = async (silent = false): Promise<void> => {
     if (!silent) setLoading(true);
     try {
-      const [statsPayload, jobsPayload, usersPayload] = await Promise.all([
+      const [statsPayload, jobsPayload, usersPayload, logsPayload] = await Promise.all([
         fetchAdminStats(),
         fetchAdminJobs(),
         fetchAdminUsers(),
+        fetchAdminLogs(),
       ]);
       setStats(statsPayload);
       setJobs(jobsPayload);
       setUsers(usersPayload);
+      setLogs(logsPayload);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load admin data';
       toast.error(message);
@@ -203,6 +230,12 @@ export const AdminDashboard: React.FC = () => {
       Icon: Activity,
       colorClass: 'text-white bg-white/5',
     },
+    {
+      label: 'Logs',
+      value: logs.length,
+      Icon: ShieldCheck,
+      colorClass: 'text-brand-accent bg-brand-accent/10',
+    },
   ];
 
   const tabButtonClass = (tab: string) => (
@@ -245,6 +278,9 @@ export const AdminDashboard: React.FC = () => {
           </button>
           <button onClick={() => handleTabChange('jobs')} className={`inline-flex items-center justify-center min-w-28 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${tabButtonClass('jobs')}`}>
             Jobs
+          </button>
+          <button onClick={() => handleTabChange('logs')} className={`inline-flex items-center justify-center min-w-28 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${tabButtonClass('logs')}`}>
+            Logs
           </button>
         </div>
 
@@ -295,6 +331,19 @@ export const AdminDashboard: React.FC = () => {
             onOpenJobDetail={handleOpenJobDetail}
             onToggleJobVerification={handleToggleJobVerification}
             onDeleteJob={handleDeleteJob}
+          />
+        )}
+
+        {activeTab === 'logs' && (
+          <AdminLogsTab
+            loading={loading}
+            logs={logs}
+            filteredLogs={filteredLogs}
+            logSearchQuery={logSearchQuery}
+            onLogSearchQueryChange={setLogSearchQuery}
+            logTableFilter={logTableFilter}
+            onLogTableFilterChange={setLogTableFilter}
+            availableLogTypes={availableLogTypes}
           />
         )}
     </PageContainer>

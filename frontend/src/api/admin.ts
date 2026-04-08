@@ -1,5 +1,5 @@
 import { api, extractError } from './client';
-import type { AdminJob, AdminStats, AdminUser } from '../types/admin';
+import type { AdminJob, AdminLog, AdminStats, AdminUser } from '../types/admin';
 
 type AdminEmployer = {
   user_id: number;
@@ -18,7 +18,6 @@ export const fetchAdminStats = async (): Promise<AdminStats> => {
 export const fetchAdminJobs = async (): Promise<AdminJob[]> => {
   try {
     const { data: p } = await api.get('/admin/all-jobs');
-    console.log('Fetched admin jobs', p);
     return Array.isArray(p?.data) ? (p.data as AdminJob[]) : [];
   } catch (err) {
     throw new Error(extractError(err, 'Failed to fetch jobs'));
@@ -109,11 +108,13 @@ export const verifyAdminJob = async (jobId: number): Promise<unknown> => {
   }
 };
 
-export const fetchAdminLogs = async () =>{
-try{
-  const { data: p } = await api.get('/admin/logs');
-}catch (err) {
-  throw new Error(extractError(err, 'Failed to fetch logs'));
-}
-
+export const fetchAdminLogs = async (): Promise<AdminLog[]> => {
+  try {
+    const { data: p } = await api.get('/admin/logs');
+    return Array.isArray(p?.data) ? (p.data as AdminLog[]) : [];
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to fetch logs'));
+  }
 };
+
+

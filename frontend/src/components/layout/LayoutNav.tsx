@@ -23,6 +23,7 @@ const getAdminLinks = (): NavLinkItem[] => [
   { to: '/admin/dashboard?tab=overview', label: 'Overview' },
   { to: '/admin/dashboard?tab=users', label: 'Users' },
   { to: '/admin/dashboard?tab=jobs', label: 'Jobs' },
+  { to: '/admin/dashboard?tab=logs', label: 'Logs' },
 ];
 
 const getUserLinks = (

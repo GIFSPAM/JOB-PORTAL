@@ -187,7 +187,7 @@ export const unverifyJob = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Job not found.' });
         }
-        await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [req.user.user_id, `Unverified job ID ${job_id}`, 'jobs', job_id]);
+        await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [req.user.user_id, `Unverified job ID`, 'jobs', job_id]);
         return res.status(200).json({ success: true, message: 'Job unverified.' });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });

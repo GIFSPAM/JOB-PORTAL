@@ -58,3 +58,13 @@ export interface AdminJob {
   profile_picture_url?: string;
   skills?: string[];
 }
+
+export interface AdminLog {
+  log_id: number;
+  admin_id: number;
+  action_type?: string;
+  target_table?: string;
+  target_id?: number;
+  action_time?: string;
+  admin_email?: string;
+}
