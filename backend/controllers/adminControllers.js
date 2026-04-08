@@ -14,11 +14,6 @@ import {
     SELECT_ALL_SEEKERS
 } from '../services/queries/adminQueries.js';
 
-/**
- * @desc    Verify a posted job so it appears on the public feed
- * @route   PATCH /api/admin/verify-job/:job_id
- * @access  Private (Admin only)
- */
 export const verifyJob = async (req, res) => {
     const { job_id } = req.params;
     // We get the admin's ID from the JWT token payload (handled by authMiddleware)
@@ -27,6 +22,7 @@ export const verifyJob = async (req, res) => {
     try {
         // Remember, no [result] destructuring for MariaDB updates!
         const result = await pool.query(VERIFY_JOB, [admin_id, job_id]);
+        await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [admin_id, `Verified job ID ${job_id}`, 'jobs', job_id]);
         
         // It's good practice to check if the job actually existed
         if (result.affectedRows === 0) {
@@ -39,11 +35,6 @@ export const verifyJob = async (req, res) => {
     }
 };
 
-/**
- * @desc    Get all jobs for admin audit
- * @route   GET /api/admin/all-jobs
- * @access  Private (Admin only)
- */
 export const getAllJobs = async (req, res) => {
     try {
         const { search, location, job_type, sort_by, status, is_verified, skills } = req.query;
@@ -95,11 +86,6 @@ export const getAllJobs = async (req, res) => {
     }
 };
 
-/**
- * @desc    Get all platform users
- * @route   GET /api/admin/users
- * @access  Private (Admin only)
- */
 export const getUsers = async (req, res) => {
     try {
         const rows = await pool.query(SELECT_ALL_USERS);
@@ -110,11 +96,6 @@ export const getUsers = async (req, res) => {
     }
 };
 
-/**
- * @desc    Get one user by id
- * @route   GET /api/admin/users/:user_id
- * @access  Private (Admin only)
- */
 export const getUserById = async (req, res) => {
     const { user_id } = req.params;
 
@@ -131,11 +112,6 @@ export const getUserById = async (req, res) => {
     }
 };
 
-/**
- * @desc    Update user active status
- * @route   PATCH /api/admin/users/:user_id/status
- * @access  Private (Admin only)
- */
 export const updateUserStatus = async (req, res) => {
     const { user_id } = req.params;
     const { is_active } = req.body;
@@ -151,6 +127,8 @@ export const updateUserStatus = async (req, res) => {
 
     try {
         const result = await pool.query(UPDATE_USER_ACTIVE_STATUS, [is_active ? 1 : 0, user_id]);
+        await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [adminId, is_active ? `Activated user ${user_id}` : `Deactivated user ${user_id}`, 'users', user_id]);
+
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -162,11 +140,6 @@ export const updateUserStatus = async (req, res) => {
     }
 };
 
-/**
- * @desc    Delete a user (cascade from Users)
- * @route   DELETE /api/admin/users/:user_id
- * @access  Private (Admin only)
- */
 export const deleteUser = async (req, res) => {
     const { user_id } = req.params;
     const adminId = req.user.user_id;
@@ -177,6 +150,7 @@ export const deleteUser = async (req, res) => {
 
     try {
         const result = await pool.query(DELETE_USER, [user_id]);
+        await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [adminId, `Deleted user ${user_id}`, 'users', user_id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -188,11 +162,6 @@ export const deleteUser = async (req, res) => {
     }
 };
 
-/**
- * @desc    Delete a job as admin
- * @route   DELETE /api/admin/jobs/:job_id
- * @access  Private (Admin only)
- */
 export const deleteJobAsAdmin = async (req, res) => {
     const { job_id } = req.params;
 
@@ -202,6 +171,8 @@ export const deleteJobAsAdmin = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Job not found.' });
         }
+
+        await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [req.user.user_id, `Deleted job ID ${job_id}`, 'jobs', job_id]);
 
         return res.status(200).json({ success: true, message: 'Job deleted successfully.' });
     } catch (error) {
@@ -216,6 +187,7 @@ export const unverifyJob = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Job not found.' });
         }
+        await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [req.user.user_id, `Unverified job ID ${job_id}`, 'jobs', job_id]);
         return res.status(200).json({ success: true, message: 'Job unverified.' });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
@@ -264,3 +236,13 @@ export const getAllSeekers = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+export const getAdminLogs = async (req, res) => {
+    try {
+        const rows = await pool.query(`SELECT al.*, u.email AS admin_email FROM adminlogs al JOIN users u ON al.admin_id = u.user_id ORDER BY action_time DESC`);
+        return res.status(200).json({ success: true, data: rows });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+

@@ -108,3 +108,12 @@ export const verifyAdminJob = async (jobId: number): Promise<unknown> => {
     throw new Error(extractError(err, 'Failed to verify job'));
   }
 };
+
+export const fetchAdminLogs = async () =>{
+try{
+  const { data: p } = await api.get('/admin/logs');
+}catch (err) {
+  throw new Error(extractError(err, 'Failed to fetch logs'));
+}
+
+};

@@ -58,8 +58,10 @@ export const JobDetail: React.FC = () => {
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : 'Failed to load job details';
         toast.error(message);
+        
       })
-      .finally(() => setLoading(false));
+      .finally(() => {setLoading(false);
+      });
   }, [navigate, parsedJobId, toast, validJobId]);
 
   useEffect(() => {
@@ -182,7 +184,7 @@ export const JobDetail: React.FC = () => {
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 rounded-2xl border border-white/10 bg-white/5 overflow-hidden shrink-0">
                     <img
-                      src={logoSrc}
+                      src={job.logo ? job.logo : COMPANY_LOGOS.co_opert}
                       alt={`${job.company || 'Company'} logo`}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"

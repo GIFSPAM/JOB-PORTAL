@@ -100,16 +100,3 @@ export const login = async (req, res) => {
     }
 };
 
-export const getMe = async (req, res) => {
-    try {
-        const rows = await pool.query(SELECT_AUTH_USER_BY_ID, [req.user.user_id]);
-
-        if (!rows.length) {
-            return res.status(404).json({ success: false, message: "User not found." });
-        }
-
-        return res.status(200).json({ success: true, data: rows[0] });
-    } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
-    }
-};

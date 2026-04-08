@@ -11,7 +11,8 @@ import {
     unverifyJob,
     getAdminStats,
     getAllEmployers,
-    getAllSeekers
+    getAllSeekers,
+    getAdminLogs
 } from '../../controllers/adminControllers.js';
 
 const router = express.Router();
@@ -32,5 +33,6 @@ router.delete('/jobs/:job_id', deleteJobAsAdmin);
 router.patch('/verify-job/:job_id', verifyJob);
 router.patch('/unverify-job/:job_id', unverifyJob);
 router.get('/all-jobs', getAllJobs);
+router.get('/logs', getAdminLogs);
 
 export default router;

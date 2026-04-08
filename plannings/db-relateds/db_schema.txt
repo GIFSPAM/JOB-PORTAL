@@ -69,13 +69,11 @@ CREATE TABLE Applications (
     status ENUM('applied','shortlisted','rejected','hired') DEFAULT 'applied',
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified_by_admin INT NULL,
-    admin_note VARCHAR(255) NULL,
     UNIQUE(job_id, seeker_id),
     FOREIGN KEY (job_id) REFERENCES Jobs(job_id)
         ON DELETE CASCADE,
     FOREIGN KEY (seeker_id) REFERENCES JobSeekers(seeker_id)
-        ON DELETE CASCADE,
-    FOREIGN KEY (modified_by_admin) REFERENCES Users(user_id)
+        ON DELETE CASCADE
 );
 
 -- 7️⃣ SKILLS MASTER TABLE
