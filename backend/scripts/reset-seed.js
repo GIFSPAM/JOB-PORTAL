@@ -46,7 +46,6 @@ resetDatabase().catch(async (error) => {
     try {
         await pool.query('SET FOREIGN_KEY_CHECKS = 1');
     } catch {
-        // no-op
     }
     await pool.end();
     process.exit(1);

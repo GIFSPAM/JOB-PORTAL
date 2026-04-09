@@ -43,7 +43,6 @@ router.get('/saved-jobs', getSavedJobs);
 router.delete('/saved-jobs/:job_id', removeSavedJob);
 router.get('/jobs/employer/:job_id', getEmployerDetails);
 
-// Route for seeker profile photo
 router.post('/photo', isSeeker, uploadSeekerProfile.single('image'), updateLogo);
 
 

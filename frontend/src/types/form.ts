@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 
 export interface AuthFieldProps {
   label: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   type?: string;
   placeholder?: string;
   value: string;

@@ -16,15 +16,12 @@ import {
 
 export const verifyJob = async (req, res) => {
     const { job_id } = req.params;
-    // We get the admin's ID from the JWT token payload (handled by authMiddleware)
     const admin_id = req.user.user_id; 
 
     try {
-        // Remember, no [result] destructuring for MariaDB updates!
         const result = await pool.query(VERIFY_JOB, [admin_id, job_id]);
         await pool.query(`insert into adminlogs (admin_id, action_type,target_table,target_id) values (?, ?, ?, ?)`, [admin_id, `Verified job ID ${job_id}`, 'jobs', job_id]);
         
-        // It's good practice to check if the job actually existed
         if (result.affectedRows === 0) {
              return res.status(404).json({ success: false, message: "Job not found." });
         }

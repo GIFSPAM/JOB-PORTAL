@@ -21,6 +21,7 @@ import { registerAPI } from '../../api';
 import { AuthField } from './AuthField';
 import { useToast } from '../Toast';
 import { decodeRole, getDashboardRoute, useAuth } from '../../context/AuthContext';
+import { A } from '@/dist/assets/phone-BMWjaI_Y';
 
 const ROLE_CONFIG = {
   seeker:   { bg: 'bg-blue-500/10',   text: 'text-blue-400',   Icon: UserIcon,  label: 'Seeker'   },
@@ -56,6 +57,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
   const [education, setEducation]           = useState('');
   const [experienceYears, setExperienceYears] = useState('');
   const [phoneNumber, setPhoneNumber]       = useState('');
+  const [gender, setGender]= useState('');
 
   // employer fields
   const [companyName, setCompanyName]         = useState('');
@@ -128,6 +130,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
           <AuthField label="Phone Number"        icon={Phone}         type="tel"    placeholder="+1 234 567 890" value={phoneNumber}     onChange={e => setPhoneNumber(e.target.value)}     required />
           <AuthField label="Education"           icon={GraduationCap} placeholder="B.Tech, MBA, MSc..." value={education}       onChange={e => setEducation(e.target.value)}       required />
           <AuthField label="Experience (Years)"  icon={Briefcase}     type="number" min={0} placeholder="0" value={experienceYears} onChange={e => setExperienceYears(e.target.value)} required />
+
         </div>
       </FormSection>
     );

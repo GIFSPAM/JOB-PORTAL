@@ -10,12 +10,10 @@ import publicRoutes from './routes/public/public.routes.js';
 dotenv.config();
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true })); 
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/seeker', seekerRoutes);
@@ -27,7 +25,6 @@ BigInt.prototype.toJSON = function() {
   return this.toString(); 
 };
 
-// Global Error Handler (Optional but recommended for Multer)
 app.use((err, req, res, next) => {
     if (err) {
         return res.status(400).json({ success: false, message: err.message });

@@ -63,7 +63,6 @@ export const createJob = async (req, res) => {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
-        // 1. FIX: Remove the [brackets] from the variable name
         const rawResponse = await conn.query(INSERT_JOB, [
             employer_id, title, description, location, normalizedJobType, salary_min, salary_max
         ]);
