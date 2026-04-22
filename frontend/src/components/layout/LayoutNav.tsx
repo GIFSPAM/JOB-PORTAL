@@ -16,7 +16,6 @@ const getGuestLinks = (): NavLinkItem[] => [
   { to: '/', label: 'Home' },
   { to: '/explore-jobs', label: 'Explore Jobs' },
   { to: '/register', label: 'Post a Job' },
-  { to: '/login', label: 'Admin' },
 ];
 
 const getAdminLinks = (): NavLinkItem[] => [
@@ -79,6 +78,14 @@ export const LayoutNav: React.FC = () => {
     : user && user.role !== 'admin'
       ? getUserLinks(user.role, dashboardRoute, profileRoute)
       : getGuestLinks();
+  const dedupedNavLinks = navLinks.filter(
+    (item, index, arr) =>
+      item.to !== '/explore-jobs'
+      || arr.findIndex((candidate) => candidate.to === '/explore-jobs') === index,
+  );
+  const visibleNavLinks = isAdminUser
+    ? dedupedNavLinks.filter((item) => item.to !== '/explore-jobs')
+    : dedupedNavLinks;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -146,7 +153,7 @@ export const LayoutNav: React.FC = () => {
         <Logo />
 
         <div className="hidden md:flex items-center gap-10 text-sm font-bold text-text-muted">
-          {navLinks.map((item) => {
+          {visibleNavLinks.map((item) => {
             const className = isAdminUser
               ? adminNavClass(item.label.toLowerCase())
               : seekerNavClass(item.to);

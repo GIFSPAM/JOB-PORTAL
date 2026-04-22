@@ -41,12 +41,12 @@ const renderProtectedRoutes = (routes: ProtectedRouteDef[]) =>
   ));
 
 const commonProtectedRoutes: ProtectedRouteDef[] = [
-  { path: '/explore-jobs', element: <ExploreJobs /> },
   { path: '/jobs/:jobId', element: <JobDetail /> },
   { path: '/employers/:employerId', element: <EmployerDetail /> },
 ];
 
 const seekerRoutes: ProtectedRouteDef[] = [
+  { path: '/explore-jobs', element: <ExploreJobs />, roles: ['jobseeker'] },
   { path: '/seeker/dashboard', element: <SeekerDashboard />, roles: ['jobseeker'] },
   { path: '/seeker/applications', element: <Applications />, roles: ['jobseeker'] },
   { path: '/seeker/saved-jobs', element: <SavedJobs />, roles: ['jobseeker'] },
