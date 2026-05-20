@@ -22,7 +22,7 @@ export const AuthField: React.FC<AuthFieldProps> = ({
     <div className="space-y-2">
       <label className="text-xs font-bold uppercase tracking-widest text-text-muted">{label}</label>
       <div className="relative">
-        <Icon className={ICON_CLASS} />
+        {Icon ? <Icon className={ICON_CLASS} /> : null}
         <input
           type={resolvedType}
           placeholder={placeholder}
