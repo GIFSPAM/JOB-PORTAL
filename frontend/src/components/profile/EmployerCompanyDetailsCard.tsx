@@ -221,8 +221,7 @@ export const EmployerCompanyDetailsCard: React.FC<EmployerCompanyDetailsCardProp
                   />
                 </div>
                 <p className="text-white font-medium break-all">
-                  {String(profile?.profile_picture_url ?? profile?.logo_url ?? '').trim() || 'No company logo uploaded'}
-                </p>
+                  {!(profile?.profile_picture_url || profile?.logo_url) && 'No company logo uploaded'}                </p>
               </div>
             )}
           </div>

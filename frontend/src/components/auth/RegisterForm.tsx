@@ -59,6 +59,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
   const [phoneNumber, setPhoneNumber]       = useState('');
   const [gender, setGender]= useState('');
 
+  // E.164 phone number regex (use for client-side validation)
+  const PHONE_REGEX = /^\+?[1-9]\d{1,14}$/;
+
   // employer fields
   const [companyName, setCompanyName]         = useState('');
   const [industry, setIndustry]               = useState('');
@@ -80,6 +83,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
+    }
+    // client-side phone validation
+    if (role === 'seeker') {
+      if (!PHONE_REGEX.test(phoneNumber)) {
+        toast.error('Enter a valid phone number (E.164, e.g. +15551234567).');
+        return;
+      }
+    }
+    if (role === 'employer' && companyPhone) {
+      if (!PHONE_REGEX.test(companyPhone)) {
+        toast.error('Enter a valid company phone (E.164, e.g. +15551234567).');
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -127,7 +143,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
       <FormSection title="Profile Details" description="Tell employers about your background.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AuthField label="Full Name"           icon={UserIcon}      placeholder="John Doe"            value={fullName}        onChange={e => setFullName(e.target.value)}        required />
-          <AuthField label="Phone Number"        icon={Phone}         type="tel"    placeholder="+1 234 567 890" value={phoneNumber}     onChange={e => setPhoneNumber(e.target.value)}     required />
+          <AuthField label="Phone Number"        icon={Phone}         type="tel"    placeholder="+1 234 567 890" value={phoneNumber}     onChange={e => setPhoneNumber(e.target.value)}     required/>
           <AuthField label="Education"           icon={GraduationCap} placeholder="B.Tech, MBA, MSc..." value={education}       onChange={e => setEducation(e.target.value)}       required />
           <AuthField label="Experience (Years)"  icon={Briefcase}     type="number" min={0} placeholder="0" value={experienceYears} onChange={e => setExperienceYears(e.target.value)} required />
 
