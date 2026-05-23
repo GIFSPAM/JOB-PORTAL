@@ -236,7 +236,7 @@ For testing API endpoints, importing collections, or running integration flows:
     **[Job Portal API.postman_collection.json](./postman/collections/Job%20Portal%20API.postman_collection.json)**
 *   Import this collection into Postman and set the collection-level environment variable `base_url` to your active backend host (e.g., `http://localhost:5000`).
 ---
-##Preview
+## Preview
 
 <br>
 <img width="1366" height="768" alt="Screenshot 2026-05-04 142504" src="https://github.com/user-attachments/assets/9a8cb78f-5347-42f8-8b50-f9c884b69de5" />
