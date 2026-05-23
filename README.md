@@ -238,12 +238,22 @@ For testing API endpoints, importing collections, or running integration flows:
 ---
 ##Preview
 
+<br>
 <img width="1366" height="768" alt="Screenshot 2026-05-04 142504" src="https://github.com/user-attachments/assets/9a8cb78f-5347-42f8-8b50-f9c884b69de5" />
+<br>
 
 <img width="1366" height="768" alt="Screenshot 2026-05-04 142551" src="https://github.com/user-attachments/assets/296804c5-3792-4e36-9a6a-d50b357f6268" />
+<br>
 
 <img width="1366" height="768" alt="Screenshot 2026-05-04 142534" src="https://github.com/user-attachments/assets/0796746d-9dce-4261-ae00-1de9a1435831" />
+<br>
 
 <img width="1366" height="768" alt="Screenshot 2026-05-04 142931" src="https://github.com/user-attachments/assets/2e8cda1f-226d-4753-b1ae-a1085a20e2fb" />
+<br>
 
 <img width="1366" height="768" alt="Screenshot 2026-05-04 145222" src="https://github.com/user-attachments/assets/b360ccba-ef8c-4305-8303-3fa46f9ef8d3" />
+<br>
+
+<img width="1366" height="768" alt="Screenshot 2026-05-04 150502" src="https://github.com/user-attachments/assets/3c77ed30-0ed5-4fb9-a89f-692bdfcf5cbc" />
+<br>
+
