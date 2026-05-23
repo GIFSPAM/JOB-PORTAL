@@ -1,4 +1,4 @@
-# 🚀 HireStream - Full-Stack Job Portal
+# 🚀 JOBYTES - Full-Stack Job Portal
 
 A modern, high-performance, and feature-rich full-stack Job Portal built using a robust SQL-based relational schema on the backend and a highly polished React UI on the frontend. The application features three specialized portals tailored to **Job Seekers**, **Employers**, and **Platform Administrators**, integrated with file uploads, search-and-match scoring systems, and complete moderation workflows.
 
