@@ -4,10 +4,10 @@ services:
     container_name: jobportal-db
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: rootpassword
-      MARIADB_DATABASE: job_portal
-      MARIADB_USER: jobuser
-      MARIADB_PASSWORD: jobpassword
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-job_portal}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
       - ./docker/mariadb-init:/docker-entrypoint-initdb.d:ro
@@ -20,16 +20,16 @@ services:
     container_name: jobportal-backend
     restart: unless-stopped
     environment:
-      PORT: 5000
+      PORT: ${PORT:-5000}
       DB_HOST: db
-      DB_USER: jobuser
-      DB_PASS: jobpassword
-      DB_NAME: job_portal
-      JWT_SECRET: SECRET_KEY
-      ADMIN_SECRET: BLACKBERRY
-      CLOUDINARY_CLOUD_NAME: dsmvie1rw
-      CLOUDINARY_API_KEY: 123136656699826
-      CLOUDINARY_API_SECRET: yZnClCy7bRx2yg5leBdNIPt3pTM
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME:-job_portal}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_SECRET: ${ADMIN_SECRET}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     depends_on:
       - db
     ports:
@@ -39,7 +39,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_BASE_URL: http://localhost:5000/api
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000/api}
     container_name: jobportal-frontend
     restart: unless-stopped
     depends_on:
