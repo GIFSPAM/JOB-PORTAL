@@ -87,13 +87,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
     // client-side phone validation
     if (role === 'seeker') {
       if (!PHONE_REGEX.test(phoneNumber)) {
-        toast.error('Enter a valid phone number (E.164, e.g. +15551234567).');
+        toast.error('Enter a valid phone number (E.164, e.g. +919876543210).');
         return;
       }
     }
     if (role === 'employer' && companyPhone) {
       if (!PHONE_REGEX.test(companyPhone)) {
-        toast.error('Enter a valid company phone (E.164, e.g. +15551234567).');
+        toast.error('Enter a valid company phone (E.164, e.g. +919876543210).');
         return;
       }
     }
@@ -146,7 +146,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ role, onBack, onSucc
           <AuthField label="Phone Number"        icon={Phone}         type="tel"    placeholder="+1 234 567 890" value={phoneNumber}     onChange={e => setPhoneNumber(e.target.value)}     required/>
           <AuthField label="Education"           icon={GraduationCap} placeholder="B.Tech, MBA, MSc..." value={education}       onChange={e => setEducation(e.target.value)}       required />
           <AuthField label="Experience (Years)"  icon={Briefcase}     type="number" min={0} placeholder="0" value={experienceYears} onChange={e => setExperienceYears(e.target.value)} required />
-
         </div>
       </FormSection>
     );
